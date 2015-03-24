@@ -3,16 +3,19 @@ Created on Mar 23, 2015
 
 @author: jonathanshor
 '''
-import nltk, numpy
-import sys, time
+import numpy as np
+import sys
 from optparse import OptionParser
 
 TRAIN_FNAME = "intersected_final_chr1_cutoff_20_train_revised.bed"
 SAMPLE_FNAME = "intersected_final_chr1_cutoff_20_sample.bed"
 TEST_FNAME = "intersected_final_chr1_cutoff_20_test.bed"
 
-def read_bed_dat(myfile):
-    return numpy.loadtxt(myfile, dtype="string", delimiter="\t")
+def read_bed_dat_sample(myfile):
+	return np.loadtxt(myfile, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), ('Strand', np.str_, 1), ('Beta', np.float32), ('450k', np.int32)])
+
+def read_bed_dat_train(myfile):
+	return np.loadtxt(myfile, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), ('Strand', np.str_, 1), ('Beta', np.float32, (33)), ('450k', np.int32)])
 
 def main(argv):
 	parser = OptionParser()
@@ -20,8 +23,8 @@ def main(argv):
 	(options, args) = parser.parse_args()     
 	path = options.path
 	print "PATH = " + path
-	trains = read_bed_dat(path + TRAIN_FNAME)
-	sample = read_bed_dat(path + SAMPLE_FNAME)
+	trains = read_bed_dat_train(path + TRAIN_FNAME)
+	sample = read_bed_dat_sample(path + SAMPLE_FNAME)
     
 	print "Sample[0] =%s" % sample[0]
 	print "Trains[0] =%s" % trains[0]
