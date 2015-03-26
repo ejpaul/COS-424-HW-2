@@ -23,12 +23,13 @@ def main(argv):
 	(options, args) = parser.parse_args()     
 	path = options.path
 	print "PATH = " + path
-	trains = read_bed_dat_train(path + TRAIN_FNAME)
+	train = read_bed_dat_train(path + TRAIN_FNAME)
 	sample = read_bed_dat_sample(path + SAMPLE_FNAME)
     
-	print "Sample[0] =%s" % sample[0]
-	print "Trains[0] =%s" % trains[0]
-	print "len(Trains) =%s" % len(trains)
+	print "sample[0] = %s" % sample[0]
+	print "train[0] = %s" % train[0]
+	print "len(train) = %s" % len(train)
+	print "train['Beta'][0] = %s" % train['Beta'][0]
 
 if __name__ == '__main__':
     main(sys.argv[1:])
