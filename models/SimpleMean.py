@@ -7,7 +7,6 @@ import numpy as np
 import sys
 from optparse import OptionParser
 sys.path.append('../utils/')
-#from FillData import *
 from UtilityFunctions import read_bed_dat_train, read_bed_dat_sample
 
 # Uses empirical mean of training data at CpG site to predict NaN data in the 
