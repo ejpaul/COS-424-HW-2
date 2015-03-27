@@ -7,12 +7,9 @@ Utility function for filling in nans for training
 '''
 import numpy as np
 import sys
+from optparse import OptionParser
 from scipy.spatial import cKDTree
-from UtilityFunctions import * 
-
-TRAIN_FNAME = "intersected_final_chr1_cutoff_20_train_revised.bed"
-SAMPLE_FNAME = "intersected_final_chr1_cutoff_20_sample.bed"
-TEST_FNAME = "intersected_final_chr1_cutoff_20_test.bed"
+from UtilityFunctions import read_bed_dat_train 
 
 # Fills in nans by averaging over 32 samples in training bed
 # Pass in beta array for training bed
@@ -66,17 +63,21 @@ def fill_neighbors(sites, train_beta, k):
         return train_beta_filled
 
 def main(argv):
-        parser = OptionParser()
-        parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
-        (options, args) = parser.parse_args()
-        path = options.path
-        print "PATH = " + path
-        train = read_bed_dat_train(path + TRAIN_FNAME)
+	parser = OptionParser()
+	parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
+	(options, args) = parser.parse_args()
+	path = options.path
+	print "PATH = " + path
+	train = read_bed_dat_train(path)
 	sites = np.transpose(np.array((train['Start'], train['End'])))
+
+	print "Pre-sample mean replacement: %s" % train['Beta'][0]
 	beta = fill_mean(train['Beta'])
 	print "Sample mean replacement: %s" % beta[0]
+	print "Pre-random replacement: %s" % train['Beta'][0]
 	beta = fill_rand(train['Beta'])
 	print "Random replacement: %s" % beta[0]
+	print "Pre-neighbors replacement: %s" % train['Beta'][0]
 	beta = fill_neighbors(sites, train['Beta'], 10)
 	print "k=10 neighbors replacement: %s" % beta[0]
 
