@@ -12,10 +12,10 @@ TRAIN_FNAME = "intersected_final_chr1_cutoff_20_train_revised.bed"
 SAMPLE_FNAME = "intersected_final_chr1_cutoff_20_sample.bed"
 TEST_FNAME = "intersected_final_chr1_cutoff_20_test.bed"
 
+def calc_r2_RMSE(preds, gTruth, intercept = 0):
 # Expects two 'Beta' both of size nX1
 # Accepts an intercept and calc's accordingly
 # Returns (Coeff of Determination (r^2), RMSE)
-def calc_r2_RMSE(preds, gTruth, intercept = 0):
 	samps = len(preds)
 	if samps != len(gTruth):
 		print "Incompatible 'Beta's' passed to calc_r2"
@@ -32,20 +32,20 @@ def calc_r2_RMSE(preds, gTruth, intercept = 0):
 		r2 = 1 - (rss / tss)
 		return (r2, rmse)
 
-# Accepts path to location of SAMPLE_FNAME
 def read_bed_dat_sample(mypath):
+# Accepts path to location of SAMPLE_FNAME
 	return np.loadtxt(mypath + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
 
-# Accepts path to location of TEST_FNAME
 def read_bed_dat_test(mypath):
+# Accepts path to location of TEST_FNAME
 	return np.loadtxt(mypath + TEST_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
 
-# Accepts path to location of TRAIN_FNAME
 def read_bed_dat_train(mypath):
+# Accepts path to location of TRAIN_FNAME
 	return np.loadtxt(mypath + TRAIN_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32, (33)), ('450k', np.int8)])
