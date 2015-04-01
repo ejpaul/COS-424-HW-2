@@ -68,8 +68,8 @@ def storePreds(path, yHats, paras, start_time):
 
 def main(argv):
 	parser = OptionParser()
-	parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
-	(options, args) = parser.parse_args()     
+	parser.add_option("-p", "--path", dest="path", help='read bed data from PATH', metavar='PATH')
+	(options, _args) = parser.parse_args()     
 	path = options.path
 	print "PATH = " + path
 	train = read_bed_dat_train(path)
