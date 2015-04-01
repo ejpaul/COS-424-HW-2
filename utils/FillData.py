@@ -59,13 +59,13 @@ def main(argv):
 	sites = np.transpose(np.array((train['Start'], train['End'])))
 
 	print "Pre-sample mean replacement: %s" % train['Beta'][0]
-	beta = fill_mean(train['Beta'])
+	beta = fill_mean(train['Beta'].copy())
 	print "Sample mean replacement: %s" % beta[0]
 	print "Pre-random replacement: %s" % train['Beta'][0]
-	beta = fill_rand(train['Beta'])
+	beta = fill_rand(train['Beta'].copy())
 	print "Random replacement: %s" % beta[0]
 	print "Pre-neighbors replacement: %s" % train['Beta'][0]
-	beta = fill_neighbors(sites, train['Beta'], 10)
+	beta = fill_neighbors(sites, train['Beta'].copy(), 10)
 	print "k=10 neighbors replacement: %s" % beta[0]
 
 if __name__ == '__main__':
