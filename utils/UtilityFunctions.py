@@ -5,17 +5,17 @@ Created on Mar 23, 2015
 @author: epaul626
 '''
 import numpy as np
-import sys
+import sys, time
 from optparse import OptionParser
 
 TRAIN_FNAME = "intersected_final_chr1_cutoff_20_train_revised.bed"
 SAMPLE_FNAME = "intersected_final_chr1_cutoff_20_sample.bed"
 TEST_FNAME = "intersected_final_chr1_cutoff_20_test.bed"
 
+def calc_r2_RMSE(preds, gTruth, intercept = 0):
 # Expects two 'Beta' both of size nX1
 # Accepts an intercept and calc's accordingly
 # Returns (Coeff of Determination (r^2), RMSE)
-def calc_r2_RMSE(preds, gTruth, intercept = 0):
 	samps = len(preds)
 	if samps != len(gTruth):
 		print "Incompatible 'Beta's' passed to calc_r2"
@@ -32,23 +32,39 @@ def calc_r2_RMSE(preds, gTruth, intercept = 0):
 		r2 = 1 - (rss / tss)
 		return (r2, rmse)
 
-# Accepts path to location of SAMPLE_FNAME
 def read_bed_dat_sample(mypath):
+# Accepts path to location of SAMPLE_FNAME
 	return np.loadtxt(mypath + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
 
-# Accepts path to location of TEST_FNAME
 def read_bed_dat_test(mypath):
+# Accepts path to location of TEST_FNAME
 	return np.loadtxt(mypath + TEST_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
 
-# Accepts path to location of TRAIN_FNAME
 def read_bed_dat_train(mypath):
+# Accepts path to location of TRAIN_FNAME
 	return np.loadtxt(mypath + TRAIN_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32, (33)), ('450k', np.int8)])
+
+#def storePreds(path, yHats, paras, start_time):
+# Stores data to disk in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
+# path = directory file will be created
+# yHats = array that will be entered as text, one row per line
+# paras = string to be inserted as part of filename
+# start_time = a time.time() to be subtracted at file create to indicate a running time
+	#outfile= open(path+"predictions_"+str(paras)+"_csec="+str(int(time.time()-start_time))+".txt", 'w')
+	#outfile.write(paras+"\n")
+	#outfile.write("\n".join(yHats))
+	#outfile.close()
+def storePreds(path, yHats, paras, start_time):
+# Stores ndarray to txt in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
+# paras also written as a comment to first line
+# yHats will be formatted as floats 
+	np.savetxt(path+"predictions_"+str(paras)+"_csec="+str(int(time.time()-start_time))+".txt", yHats, fmt="%f", header=paras)
 
 def main(argv):
 	parser = OptionParser()
