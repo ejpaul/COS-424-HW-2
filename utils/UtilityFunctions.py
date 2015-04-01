@@ -5,7 +5,7 @@ Created on Mar 23, 2015
 @author: epaul626
 '''
 import numpy as np
-import sys
+import sys, time
 from optparse import OptionParser
 
 TRAIN_FNAME = "intersected_final_chr1_cutoff_20_train_revised.bed"
@@ -49,6 +49,22 @@ def read_bed_dat_train(mypath):
 	return np.loadtxt(mypath + TRAIN_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32, (33)), ('450k', np.int8)])
+
+#def storePreds(path, yHats, paras, start_time):
+# Stores data to disk in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
+# path = directory file will be created
+# yHats = array that will be entered as text, one row per line
+# paras = string to be inserted as part of filename
+# start_time = a time.time() to be subtracted at file create to indicate a running time
+	#outfile= open(path+"predictions_"+str(paras)+"_csec="+str(int(time.time()-start_time))+".txt", 'w')
+	#outfile.write(paras+"\n")
+	#outfile.write("\n".join(yHats))
+	#outfile.close()
+def storePreds(path, yHats, paras, start_time):
+# Stores ndarray to txt in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
+# paras also written as a comment to first line
+# yHats will be formatted as floats 
+	np.savetxt(path+"predictions_"+str(paras)+"_csec="+str(int(time.time()-start_time))+".txt", yHats, fmt="%f", header=paras)
 
 def main(argv):
 	parser = OptionParser()

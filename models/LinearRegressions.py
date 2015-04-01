@@ -13,17 +13,14 @@ import FillData
 #FEAT_LIST = ['Beta']
 FEAT_LIST = 'Beta'
 
+def get_X_y_Xstar_gTruth(train, sample, test, fillwith = "R"):
 # Requires a train.bed and a sample.bed
 # Accepts a string in ("M","R","K#") method to replace NAN in train. Default is "R".
 # "M"=fill_mean, "R"=fill_rand, "K#"=fill_neighbors(#) with # parsed from string 
-# Returns arrays that can be used to train a regression model,
+# Returns arrays X, y that can be used to train a regression model,
 # i.e. are of length  = count of non-NAN rows in sample with 1 in last column
 # first array of width = FEAT_LIST count, second array of width 1
-def get_trainable_Xy(train, sample, fillwith = "R"):
-    y = sample['Beta']
-    y = y[sample['450k']==1]
-    y = y[~np.isnan(y)]
-
+# And returns arrays Xstar containing the remaining train rows to predict on 
     fillwith = fillwith.upper()
     if fillwith[0] == "K":
         train['Beta'] = FillData.fill_neighbors(np.transpose(np.array((train['Start'], train['End']))), \
@@ -32,14 +29,20 @@ def get_trainable_Xy(train, sample, fillwith = "R"):
         train['Beta'] = FillData.fill_mean(train['Beta'])
     else:
         train['Beta'] = FillData.fill_rand(train['Beta'])
-    X = train[FEAT_LIST]
-    X = X[sample['450k']==1]
-    X = X[~np.isnan(y)]
+    X = train[FEAT_LIST][sample['450k']==1]
+    sampley = sample[FEAT_LIST][sample['450k']==1]
+    X = X[~np.isnan(sampley)]
+    y = sampley[~np.isnan(sampley)]
 
-    print "X: %s ,y: %s" % (X.shape,y.shape)
-    print "y: %s" % y
-    print "X: %s" % X
-    return (X, y)
+    
+    Xstar = train[FEAT_LIST][sample['450k']==0]
+    gTruth = test['Beta'][sample['450k']==0]
+    Xstar = Xstar[~np.isnan(gTruth)]
+    gTruth = gTruth[~np.isnan(gTruth)]
+
+
+    print "X: %s ,y: %s, X*: %s, gT: %s" % (X.shape,y.shape, Xstar.shape, gTruth.shape)
+    return (X, y, Xstar, gTruth)
 
 # Requires a fitted model and an array of samples to test on
 # Returns an array of the predictions for samples in xStars
@@ -57,12 +60,22 @@ def main(argv):
     
     train = UtilityFunctions.read_bed_dat_train(path)
     sample = UtilityFunctions.read_bed_dat_sample(path)
-    (trainX, sample_y) = get_trainable_Xy(train.copy(), sample.copy())
-
+    test = UtilityFunctions.read_bed_dat_test(path)
+    (trainX, sample_y, trainXstars, test_y) = get_X_y_Xstar_gTruth(train.copy(), sample.copy(), test.copy())
+    
+    lin_start_time = time.time()
     linRegr = sklm.LinearRegression()
     linRegr.fit(trainX, sample_y, n_jobs=-1)
+    yHats = linRegr.predict(trainXstars)
+    
+    (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y)
+    UtilityFunctions.storePreds(path, yHats, "LinearRegression_r2=%.3f_RMSE=%.3f" % (r2,RMSE), lin_start_time)
+    print "r^2 = %s, RMSE = %s" % (r2, RMSE)
+    print "sklearn.Linear_model.score = %s" % linRegr.score(trainXstars, test_y)
     
     #ridgeRegr = sklm.Ridge (alpha = .5)
+    #ridgeRegr.fit(trainX, sample_y)
+    
     #lassoRegr = sklm.Lasso(alpha = 0.1)
     
     print "Runtime: %f" % (time.time()-start_time)
