@@ -46,7 +46,10 @@ def fill_rand(train_beta):
 # Pass in beta array for training bed
 # Returns complete array
 def fill_neighbors(sites, train_beta, k):
-	kdtree = cKDTree(sites, leafsize=100)
+	# Use midpoint of end and start sites as position to pass into kdtree
+	position = np.transpose(np.mean(sites, axis=1))
+	print position.shape
+	kdtree = cKDTree(position, leafsize=100)
 	train_beta_filled = train_beta
         if (train_beta.shape[1] != 33):
                 print "Array must have 33 samples"
@@ -57,9 +60,12 @@ def fill_neighbors(sites, train_beta, k):
 	for i in range(0,33):
 		sample = train_beta[:, i]
         	for j in range(0, len(train_beta)):
+			# If NaN found, query the tree for the k nearest points, with an upper bound of 
+			# 100 bp. m is an array of ints corresponding to location of the neighbors within
+			# position[]
                         if (np.isnan(sample[j])):
-				(dist, j) = kdtree.query(sites, k)
-				train_beta_filled[j, i] = np.mean(sample[j])	
+				(dist, m) = kdtree.query(position[j], k, distance_upper_bound=1000)
+				train_beta_filled[j, i] = np.mean(sample[m])	
         return train_beta_filled
 
 def main(argv):
