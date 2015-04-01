@@ -52,9 +52,10 @@ def main(argv):
     start_time = time.time()
     
     #Pull data
-    train = UtilityFunctions.read_bed_dat_train(path)
-    sample = UtilityFunctions.read_bed_dat_sample(path)
-    test = UtilityFunctions.read_bed_dat_test(path)
+    chrom = 2
+    train = UtilityFunctions.read_bed_dat_train(path,chrom)
+    sample = UtilityFunctions.read_bed_dat_sample(path,chrom)
+    test = UtilityFunctions.read_bed_dat_test(path,chrom)
     #Prep data
     (trainX, sample_y, trainXstars, test_y) = get_X_y_Xstar_gTruth(train.copy(), sample.copy(), test.copy())
     
@@ -64,8 +65,8 @@ def main(argv):
     linRegr.fit(trainX, sample_y, n_jobs=-1)
     yHats = linRegr.predict(trainXstars)    
     (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y, linRegr.intercept_)
-    UtilityFunctions.storePreds(path, linRegr.coef_, "LinearRegression_r2=%.3f_RMSE=%.3f" % (r2,RMSE), lin_start_time)
-    print "r^2 = %s, RMSE = %s" % (r2, RMSE)
+    UtilityFunctions.storePreds(path, linRegr.coef_, "LinearRegression_chr=%s_r2=%.3f_RMSE=%.3f" % (chrom,r2,RMSE), lin_start_time)
+    print "Linear: r^2 = %s, RMSE = %s" % (r2, RMSE)
     print "sklearn.Linear_model.score = %s" % linRegr.score(trainXstars, test_y)
     
     #Ridge Regression, with cross validated alpha
@@ -79,8 +80,8 @@ def main(argv):
     (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y)
     # As sklm.Ridge does not seem to provide access to the intercept it, have to use its score function for r2
     r2 = ridgeRegr.score(trainXstars, test_y)
-    UtilityFunctions.storePreds(path, ridgeRegr.coef_, "RidgeRegression_r2=%.3f_RMSE=%.3f" % (r2,RMSE), ridge_start_time)
-    print "r^2 = %s, RMSE = %s" % (r2, RMSE)
+    UtilityFunctions.storePreds(path, ridgeRegr.coef_, "RidgeRegression_chr=%s_r2=%.3f_RMSE=%.3f" % (chrom,r2,RMSE), ridge_start_time)
+    print "Ridge: r^2 = %s, RMSE = %s" % (r2, RMSE)
     
     #Lasso regression -- something is very broken here, produces negative r^2 values!!
     lasso_start_time = time.time()
@@ -88,8 +89,8 @@ def main(argv):
     lassoRegr.fit(trainX, sample_y)
     yHats = lassoRegr.predict(trainXstars)
     (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y, lassoRegr.intercept_)
-    UtilityFunctions.storePreds(path, lassoRegr.coef_, "LassoRegression_r2=%.3f_RMSE=%.3f" % (r2,RMSE), lasso_start_time)
-    print "r^2 = %s, RMSE = %s" % (r2, RMSE)
+    UtilityFunctions.storePreds(path, lassoRegr.coef_, "LassoRegression_chr=%s_r2=%.3f_RMSE=%.3f" % (chrom,r2,RMSE), lasso_start_time)
+    print "Lasso: r^2 = %s, RMSE = %s" % (r2, RMSE)
     print "sklm.Lasso.score = %s" % lassoRegr.score(trainXstars, test_y)
     print "Number of iters = %s" % lassoRegr.max_iter
     
