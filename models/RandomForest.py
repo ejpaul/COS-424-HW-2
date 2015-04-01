@@ -11,6 +11,22 @@ sys.path.append('../utils/')
 from UtilityFunctions import *
 from FillData import *
 
+
+def feat_all_samples(sites, train_beta, sample, test):
+	X = np.zeros((len(train_beta)*33, 5))
+        for i in range(0, len(train_beta)):
+		for j in range(0, 33)):
+			k = i*33 + j
+			# Feature 1: nearest neighbor
+			X[k, 0] = train_beta[i+index1, j]
+			# Feature 2: second nearest neighbor
+			X[k, 1] = train_beta[i+index2, j]
+			# Feature 3: CpG start site
+			X[k, 2] = sites[i, 0]
+			# Feature 5: Sample number
+			X[k, 4] = j
+			# Beta value at sample site
+			Y[k] = train_beta[i, j]
 # Produces 'X' feature array of nearest neighbor beta values that will be fed
 # into regressor
 # Beta is an array of shape (# of CpG sites, nsamples)

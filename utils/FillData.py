@@ -33,23 +33,29 @@ def fill_neighbors(site, train_beta, k):
 # Fills in nans with mean over k nearest CpG sites
 # Pass in beta array for training bed
 # Returns complete array
-	kdtree = cKDTree(site, leafsize=100)
-	train_beta_filled = train_beta
 	if (train_beta.shape[1] != 33):
 		print "Array must have 33 samples"
 		sys.exit(2)
-	if (site.shape[1] != 1):
-		print "Array must have 1 columns corresponding to start site"
-		sys.exit(2)
+	site = site.reshape((len(site), 1))
+	kdtree = cKDTree(site, leafsize=100)
+        train_beta_filled = train_beta
 	for i in range(0,33):
 		sample = train_beta[:, i]
         	for j in range(0, len(train_beta)):
 			# If NaN found, query the tree for the k nearest points, with an upper bound of 
-			# 100 bp. m is an array of ints corresponding to location of the neighbors within
+			# 1000 bp. m is an array of ints corresponding to location of the neighbors within
 			# position[]
 			if (np.isnan(sample[j])):
-				(dist, j) = kdtree.query(site, k)
-				train_beta_filled[j, i] = np.mean(sample[j])	
+				(dist, m) = kdtree.query(site[j], k, distance_upper_bound=1000)
+				m = m[m<len(sample)]
+				# Choose only non-NaN samples
+				neighbors = sample[m]
+				neighbors = neighbors[~np.isnan(neighbors)]
+				# If no neighbors found, use mean over samples
+				if (len(neighbors) == 0):
+					train_beta_filled[j, i] = np.mean(train_beta[i][~np.isnan(train_beta[i])])
+				else:
+					train_beta_filled[j, i] = np.mean(neighbors)	
 	return train_beta_filled
 
 def main(argv):
