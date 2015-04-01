@@ -9,6 +9,7 @@ from optparse import OptionParser
 from sklearn.ensemble import RandomForestRegressor
 sys.path.append('../utils/')
 from UtilityFunctions import *
+from FillData import *
 
 # Produces 'X' feature array of nearest neighbor beta values that will be fed
 # into regressor
@@ -16,19 +17,19 @@ from UtilityFunctions import *
 # Sites is an array of shape (# of CpG sites, 2) corresponding to 
 # start and ending bp of site
 def feat_neighbors(sites, train_beta):
-	X = np.zeros(len(train_beta)*33, 5)
-	Y = np.zeros(len(train_beta)*33, 1)
+	X = np.zeros((len(train_beta)*33, 5))
+	Y = np.zeros((len(train_beta)*33, ))
 	# Iterate over CpG sites
 	for i in range(0, len(train_beta)):
-		indices = find_neighbors(sites, i)[0]
+		indices = find_neighbors(sites, i)
 		index1 = indices[0]
 		index2 = indices[1]
 		for j in range(0, 33):
 			k = i*33 + j
 			# Feature 1: nearest neighbor
-			X[k, 0] = train_beta[j, i+index1]
+			X[k, 0] = train_beta[i+index1, j]
 			# Feature 2: second nearest neighbor
-			X[k, 1] = train_beta[j, i+index2]
+			X[k, 1] = train_beta[i+index2, j]
 			# Feature 3: CpG start site
 			X[k, 2] = sites[i, 0]
 			# Feature 4: CpG end site
@@ -36,7 +37,7 @@ def feat_neighbors(sites, train_beta):
 			# Feature 5: Sample number
 			X[k, 4] = j
 			# Beta value at sample site
-			Y[k] = train_beta[j, i]
+			Y[k] = train_beta[i, j]
 	return (X, Y)
 
 # Find nearest 2 sites to current CpG site
@@ -55,16 +56,16 @@ def find_neighbors(sites, i):
 	else:
 		d_l2 = -1
 	# Look to right
-	if (i < len(train_beta)-2):
-		d_r1 = sites[train_beta-1, 0] - end_curr
+	if (i < len(sites)-2):
+		d_r1 = sites[i-1, 0] - end_curr
 	else:
 		return [-1, -2]
-	if (i < len(train_beta)-3):
-		d_r2 = sites[train_beta-2, 0] - end_curr
+	if (i < len(sites)-3):
+		d_r2 = sites[i-2, 0] - end_curr
 	else:
 		d_r2 = -1
 	# Compare
-	if (d_l1 < d_r1):
+	if (d_l1 < d_r1 and d_l1 != -1):
 		site_1 = -1
 		if (d_l2 < d_r1):
 			site_2 = -2
@@ -72,7 +73,7 @@ def find_neighbors(sites, i):
 			 site_2 = 1
 		return [site_1, site_2] 
 	site_1 = 1
-	if (d_r2 < d_l1):
+	if (d_r2 < d_l1 and d_r2 != -1):
 		site_2 = 2
 	else:
 		site_2 = -1	
@@ -83,7 +84,7 @@ def main(argv):
 	parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
 	(options, args) = parser.parse_args()
 	path = options.path
-        train = read_bed_dat_train(path + TRAIN_PATH)
+        train = read_bed_dat_train(path)
         sites = np.transpose(np.array((train['Start'], train['End'])))
 # Fill in NaNs in training with mean over 33 samples in training bed
         train_beta = fill_mean(train['Beta'])
