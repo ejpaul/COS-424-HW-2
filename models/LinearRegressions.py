@@ -9,10 +9,11 @@ from optparse import OptionParser
 import sklearn.linear_model as sklm
 import UtilityFunctions
 import FillData
-from operator import or_
+import RandomForest
 
 #FEAT_LIST = ['Beta']
 FEAT_LIST = 'Beta'
+
 
 def get_X_y_Xstar_gTruth(train, sample, test, fillwith = "R"):
 # Requires a train.bed, sample.bed, and test.bed
@@ -25,8 +26,7 @@ def get_X_y_Xstar_gTruth(train, sample, test, fillwith = "R"):
 # And gTruth containing the ground truth values for Xstar 
     fillwith = fillwith.upper()
     if fillwith[0] == "K":
-        train['Beta'] = FillData.fill_neighbors(np.transpose(np.array((train['Start'], train['End']))), \
-                                                train['Beta'], int(fillwith[1:]))
+        train['Beta'] = FillData.fill_neighbors(train['Start'], train['Beta'], int(fillwith[1:]))
     elif fillwith == "M":
         train['Beta'] = FillData.fill_mean(train['Beta'])
     else:
@@ -52,16 +52,18 @@ def main(argv):
     parser.add_option("-s", dest="lasso", action="store_true", default=False)
     parser.add_option("-c", type="int", dest="chrom", default=1)
     parser.add_option("-a", dest="all", action="store_true", default=False)
+    parser.add_option("-n", dest="nan", default="R")
     (options, _args) = parser.parse_args()     
     path = options.path
     print "PATH = " + path
     lin = options.linear
     rid = options.ridge
     las = options.lasso
+    nanOpt = options.nan
     start_time = time.time()
     
     if options.all:
-        chroms = range(1,23)
+        chroms = range(1,22)
     else:
         chroms = [options.chrom]
     
@@ -72,7 +74,8 @@ def main(argv):
             sample = UtilityFunctions.read_bed_dat_sample(path,chrom)
             test = UtilityFunctions.read_bed_dat_test(path,chrom)
             #Prep data
-            (trainX, sample_y, trainXstars, test_y) = get_X_y_Xstar_gTruth(train.copy(), sample.copy(), test.copy())
+            (trainX, sample_y, trainXstars, test_y) = get_X_y_Xstar_gTruth(train.copy(), sample.copy(), test.copy(), nanOpt)
+            #(trainX, sample_y, trainXstars, test_y) = RandomForest.feat_all_samples(train['Start'].copy(), train['Beta'].copy(), sample.copy(), test.copy())
         
         #Linear Regression
         if lin:
@@ -80,9 +83,10 @@ def main(argv):
             linRegr = sklm.LinearRegression()
             linRegr.fit(trainX, sample_y, n_jobs=-1)
             yHats = linRegr.predict(trainXstars)    
-            (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y, linRegr.intercept_)
-            UtilityFunctions.storePreds(path, linRegr.coef_, "LinearRegression_chr=%s_r2=%.3f_RMSE=%.3f" % (chrom,r2,RMSE), lin_start_time)
-            print "LinearRegression_chr=%s_r2=%.3f_RMSE=%.3f" % (chrom,r2,RMSE)
+            (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y)
+            paras = "LinearRegression_chr=%s_nans=%s_r2=%.3f_RMSE=%.3f" % (chrom, nanOpt,r2,RMSE)
+            print paras
+            UtilityFunctions.storePreds(path, linRegr.coef_, paras, lin_start_time)
             print "sklearn.Linear_model.score = %s" % linRegr.score(trainXstars, test_y)
         
         if rid:
@@ -96,10 +100,11 @@ def main(argv):
             ridgeRegr.fit(trainX, sample_y)
             yHats = ridgeRegr.predict(trainXstars)
             (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y)
-            # As sklm.Ridge does not seem to provide access to the intercept it, have to use its score function for r2
+            # As sklm.Ridge does not seem to provide access to the intercept it calc'd, have to use its score function for r2
             r2 = ridgeRegr.score(trainXstars, test_y)
-            UtilityFunctions.storePreds(path, ridgeRegr.coef_, "RidgeRegression_chr=%s_alpha=%s_r2=%.3f_RMSE=%.3f" % (chrom, alpha,r2,RMSE), ridge_start_time)
-            print "RidgeRegression_chr=%s_r2=%.3f_RMSE=%.3f" % (chrom,r2,RMSE)
+            paras = "RidgeRegression_chr=%s_nans=%s_alpha=%s_r2=%.3f_RMSE=%.3f" % (chrom, nanOpt, alpha,r2,RMSE)
+            print paras
+            UtilityFunctions.storePreds(path, ridgeRegr.coef_, paras, ridge_start_time)
         
         if las:
             #Lasso regression -- something is very broken here, produces negative r^2 values!!
@@ -109,9 +114,11 @@ def main(argv):
             lassoRegr.fit(trainX, sample_y)
             yHats = lassoRegr.predict(trainXstars)
             (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y, lassoRegr.intercept_)
-            UtilityFunctions.storePreds(path, lassoRegr.coef_, "LassoRegression_chr=%s_alpha=%s_r2=%.3f_RMSE=%.3f" % (chrom, alpha,r2,RMSE), lasso_start_time)
-            print "LassoRegression_chr=%s_alpha=%s_r2=%.3f_RMSE=%.3f" % (chrom, alpha,r2,RMSE)
+            paras = "LassoRegression_chr=%s_nans=%s_alpha=%s_r2=%.3f_RMSE=%.3f" % (chrom, nanOpt, alpha,r2,RMSE)
+            print paras
+            UtilityFunctions.storePreds(path, lassoRegr.coef_, paras, lasso_start_time)
             print "sklm.Lasso.score = %s" % lassoRegr.score(trainXstars, test_y)
+            print "intercept = %s" % lassoRegr.intercept_
             print "Number of iters = %s" % lassoRegr.max_iter
     
     print "Runtime: %f" % (time.time()-start_time)
