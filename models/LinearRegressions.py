@@ -11,11 +11,11 @@ import UtilityFunctions
 import FillData
 import RandomForest
 
-#FEAT_LIST = ['Beta']
-FEAT_LIST = 'Beta'
+FEAT_LIST = ['Beta', 'Island']
+#FEAT_LIST = 'Beta'
 
 
-def get_X_y_Xstar_gTruth(train, sample, test, fillwith = "R"):
+def get_X_y_Xstar_gTruth(train, sample, test, fillwith = "R", getIsland = False):
 # Requires a train.bed, sample.bed, and test.bed
 # Accepts a string in ("M","R","K#") method to replace NAN in train. Default is "R".
 # "M"=fill_mean, "R"=fill_rand, "K#"=fill_neighbors(#) with # parsed from string 
@@ -31,12 +31,19 @@ def get_X_y_Xstar_gTruth(train, sample, test, fillwith = "R"):
         train['Beta'] = FillData.fill_mean(train['Beta'])
     else:
         train['Beta'] = FillData.fill_rand(train['Beta'])
-    X = train[FEAT_LIST][sample['450k']==1]
-    sampley = sample[FEAT_LIST][sample['450k']==1]
+    #X = train[FEAT_LIST][sample['450k']==1]
+    betaW = train['Beta'].shape[1]
+    feat_set = np.zeros((len(train),betaW+getIsland))
+    for b in range(betaW):
+        feat_set[:,b] = train['Beta'][:,b]
+    if getIsland:
+        feat_set[:,-1] = train['Island']
+    X = feat_set[sample['450k']==1]
+    sampley = sample['Beta'][sample['450k']==1]
     X = X[~np.isnan(sampley)]
     y = sampley[~np.isnan(sampley)]
 
-    Xstar = train[FEAT_LIST][sample['450k']==0]
+    Xstar = feat_set[sample['450k']==0]
     gTruth = test['Beta'][sample['450k']==0]
     Xstar = Xstar[~np.isnan(gTruth)]
     gTruth = gTruth[~np.isnan(gTruth)]
@@ -53,6 +60,7 @@ def main(argv):
     parser.add_option("-c", type="int", dest="chrom", default=1)
     parser.add_option("-a", dest="all", action="store_true", default=False)
     parser.add_option("-n", dest="nan", default="R")
+    parser.add_option("-i", dest="islands", action="store_true", default=False)
     (options, _args) = parser.parse_args()     
     path = options.path
     print "PATH = " + path
@@ -60,6 +68,7 @@ def main(argv):
     rid = options.ridge
     las = options.lasso
     nanOpt = options.nan
+    getIslands = options.islands
     start_time = time.time()
     
     if options.all:
@@ -70,9 +79,9 @@ def main(argv):
     for chrom in chroms:
         if lin or rid or las:
             #Pull data
-            train = UtilityFunctions.read_bed_dat_train(path,chrom)
-            sample = UtilityFunctions.read_bed_dat_sample(path,chrom)
-            test = UtilityFunctions.read_bed_dat_test(path,chrom)
+            train = UtilityFunctions.read_bed_dat_train(path,chrom, addIsland=getIslands)
+            sample = UtilityFunctions.read_bed_dat_sample(path,chrom, addIsland=getIslands)
+            test = UtilityFunctions.read_bed_dat_test(path,chrom, addIsland=getIslands)
             #Prep data
             (trainX, sample_y, trainXstars, test_y) = get_X_y_Xstar_gTruth(train.copy(), sample.copy(), test.copy(), nanOpt)
             #(trainX, sample_y, trainXstars, test_y) = RandomForest.feat_all_samples(train['Start'].copy(), train['Beta'].copy(), sample.copy(), test.copy())
@@ -84,7 +93,7 @@ def main(argv):
             linRegr.fit(trainX, sample_y, n_jobs=-1)
             yHats = linRegr.predict(trainXstars)    
             (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y)
-            paras = "LinearRegression_chr=%s_nans=%s_r2=%.3f_RMSE=%.3f" % (chrom, nanOpt,r2,RMSE)
+            paras = "LinearRegression_chr=%s_islands=%s_nans=%s_r2=%.3f_RMSE=%.3f" % (chrom, getIslands, nanOpt,r2,RMSE)
             print paras
             UtilityFunctions.storePreds(path, linRegr.coef_, paras, lin_start_time)
             print "sklearn.Linear_model.score = %s" % linRegr.score(trainXstars, test_y)
@@ -102,7 +111,7 @@ def main(argv):
             (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y)
             # As sklm.Ridge does not seem to provide access to the intercept it calc'd, have to use its score function for r2
             r2 = ridgeRegr.score(trainXstars, test_y)
-            paras = "RidgeRegression_chr=%s_nans=%s_alpha=%s_r2=%.3f_RMSE=%.3f" % (chrom, nanOpt, alpha,r2,RMSE)
+            paras = "RidgeRegression_chr=%s_islands=%s_nans=%s_alpha=%s_r2=%.3f_RMSE=%.3f" % (chrom, getIslands, nanOpt, alpha,r2,RMSE)
             print paras
             UtilityFunctions.storePreds(path, ridgeRegr.coef_, paras, ridge_start_time)
         
@@ -114,7 +123,7 @@ def main(argv):
             lassoRegr.fit(trainX, sample_y)
             yHats = lassoRegr.predict(trainXstars)
             (r2, RMSE) = UtilityFunctions.calc_r2_RMSE(yHats, test_y, lassoRegr.intercept_)
-            paras = "LassoRegression_chr=%s_nans=%s_alpha=%s_r2=%.3f_RMSE=%.3f" % (chrom, nanOpt, alpha,r2,RMSE)
+            paras = "LassoRegression_chr=%s_islands=%s_nans=%s_alpha=%s_r2=%.3f_RMSE=%.3f" % (chrom, getIslands, nanOpt, alpha,r2,RMSE)
             print paras
             UtilityFunctions.storePreds(path, lassoRegr.coef_, paras, lasso_start_time)
             print "sklm.Lasso.score = %s" % lassoRegr.score(trainXstars, test_y)
