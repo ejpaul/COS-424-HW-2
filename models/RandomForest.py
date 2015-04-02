@@ -8,25 +8,48 @@ import sys, time
 from optparse import OptionParser
 from sklearn.ensemble import RandomForestRegressor
 sys.path.append('../utils/')
+#import UtilityFunctions
 from UtilityFunctions import *
 from FillData import *
 
-
+# Treats each CpG site at each sample as its own sample
+# Rather than as features for a given CpG site
 def feat_all_samples(sites, train_beta, sample, test):
-	X = np.zeros((len(train_beta)*33, 5))
+	X = np.zeros((len(train_beta)*33, 6))
+	Y = np.zeros((len(train_beta)*33, ))
         for i in range(0, len(train_beta)):
-		for j in range(0, 33)):
+                # Find 2 nearest neighbors to site i
+                (indices,distance)  = find_neighbors(sites, i)
+                index1 = indices[0]
+                index2 = indices[1]
+		for j in range(0, 33):
 			k = i*33 + j
-			# Feature 1: nearest neighbor
+			# Feature 1: beta at neighbor 1
 			X[k, 0] = train_beta[i+index1, j]
-			# Feature 2: second nearest neighbor
-			X[k, 1] = train_beta[i+index2, j]
+			# Feature 2: distance to neighbor 1
+			X[k, 1] = distance[0]
+			# Feature 3: beta at neighbor 2
+			X[k, 2] = train_beta[i+index2, j]
+			# Feature 4: distance to neighbor 2
+			X[k, 3] = distance[1]
 			# Feature 3: CpG start site
-			X[k, 2] = sites[i, 0]
+			X[k, 4] = sites[i]
 			# Feature 5: Sample number
-			X[k, 4] = j
+			X[k, 5] = j
 			# Beta value at sample site
 			Y[k] = train_beta[i, j]
+
+	# Predict on feature set not on 450k chip
+        Xstar = X[sample['450k']==0]
+        gTruth = test['Beta'][sample['450k']==0]
+        Xstar = Xstar[~np.isnan(gTruth)]
+        gTruth = gTruth[~np.isnan(gTruth)]	
+
+	# Only train on non-NaN values of Y
+        X = X[~np.isnan(Y)]
+	Y = Y[~np.isnan(Y)]
+	return (X, Y, Xstar, gTruth)
+
 # Produces 'X' feature array of nearest neighbor beta values that will be fed
 # into regressor
 # Beta is an array of shape (# of CpG sites, nsamples)
@@ -126,6 +149,23 @@ def main(argv):
         (r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
 
 	print "Runtime: %f" % (time.time()-start_time)
+	print "RandomForest Runtime: %f" % (time.time()-start_rf)
+	print "r2 : %f" % (r2)
+	print "RMSE: %f" % (RMSE)
+	
+	feature_time = time.time()
+	(X, Y, Xstar, Ystar) = feat_all_samples(sites.copy(), train_beta.copy(), sample.copy(), test.copy())
+	# Initialize regressor with default parameters
+        start_rf = time.time()
+        model = RandomForestRegressor()
+# Fit regressor using training data
+        model.fit(X, Y)
+# Predict on Xstar values 
+        Yhat = model.predict(Xstar)
+# Calculate r2 and RMSE
+        (r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
+	print "Location feature set"
+	print "Runtime: %f" % (time.time()-feature_time)
 	print "RandomForest Runtime: %f" % (time.time()-start_rf)
 	print "r2 : %f" % (r2)
 	print "RMSE: %f" % (RMSE)

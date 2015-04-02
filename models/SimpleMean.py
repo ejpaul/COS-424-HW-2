@@ -34,8 +34,10 @@ def main(argv):
 	path = options.path
 	train = read_bed_dat_train(path)
 	sample = read_bed_dat_sample(path)
+	test = read_bed_dat_test(path)
 	predict = predict_simple_mean(train['Beta'], sample['Beta'])
 	print "Empirical Mean Prediction: %s" % predict
+	(r2, RMSE) = calc_r2_RMSE(yHats, test_y)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
