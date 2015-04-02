@@ -38,15 +38,15 @@ def fill_neighbors(site, train_beta, k):
 		sys.exit(2)
 	site = site.reshape((len(site), 1))
 	kdtree = cKDTree(site, leafsize=100)
-        train_beta_filled = train_beta
+	train_beta_filled = train_beta
 	for i in range(0,33):
 		sample = train_beta[:, i]
-        	for j in range(0, len(train_beta)):
+		for j in range(0, len(train_beta)):
 			# If NaN found, query the tree for the k nearest points, with an upper bound of 
 			# 1000 bp. m is an array of ints corresponding to location of the neighbors within
 			# position[]
 			if (np.isnan(sample[j])):
-				(dist, m) = kdtree.query(site[j], k, distance_upper_bound=1000)
+				(_dist, m) = kdtree.query(site[j], k, distance_upper_bound=1000)
 				m = m[m<len(sample)]
 				# Choose only non-NaN samples
 				neighbors = sample[m]
@@ -61,7 +61,7 @@ def fill_neighbors(site, train_beta, k):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
-	(options, args) = parser.parse_args()
+	(options, _args) = parser.parse_args()
 	path = options.path
 	print "PATH = " + path
 	train = read_bed_dat_train(path)
@@ -78,4 +78,4 @@ def main(argv):
 	print "k=10 neighbors replacement: %s" % beta[0]
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+	main(sys.argv[1:])

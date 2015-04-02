@@ -7,7 +7,7 @@ import numpy as np
 import sys, time
 from optparse import OptionParser
 sys.path.append('../utils/')
-from UtilityFunctions import *
+import UtilityFunctions
 
 # Uses empirical mean of training data at CpG site to predict NaN data in the 
 # sample file. 
@@ -30,14 +30,14 @@ def predict_simple_mean(train, sample):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
-	(options, args) = parser.parse_args()
+	(options, _args) = parser.parse_args()
 	path = options.path
 
 	time_start = time.time()
-	train = read_bed_dat_train(path)
-	sample = read_bed_dat_sample(path)
+	train = UtilityFunctions.read_bed_dat_train(path)
+	sample = UtilityFunctions.read_bed_dat_sample(path)
 	# Pull Testing data
-	test = read_bed_dat_test(path)
+	test = UtilityFunctions.read_bed_dat_test(path)
 	gTruth = test['Beta'][sample['450k']==0]
 	gTruth = gTruth[~np.isnan(gTruth)]
 	# Predict using simple mean 
@@ -46,12 +46,12 @@ def main(argv):
 	predict = predict[sample['450k']==0]
 	predict = predict[~np.isnan(gTruth)]
 	print "Empirical Mean Prediction"
-	(r2, RMSE) = calc_r2_RMSE(predict, gTruth)
+	(r2, RMSE) = UtilityFunctions.calc_r2_RMSE(predict, gTruth)
 	print "r2: %s" % r2
 	print "RMSE: %s" % RMSE
 	print "Prediction time: %s" % (time.time() - pred_time)
 	print "Elapsed time: %s" % (time.time() - time_start)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+	main(sys.argv[1:])
 

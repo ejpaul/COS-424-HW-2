@@ -16,50 +16,6 @@ SAMPLE_INAME = "_cutoff_20_sample_island.bed"
 TEST_FNAME = "_cutoff_20_test.bed"
 TEST_INAME = "_cutoff_20_test_island.bed"
 
-def sites_beta_to_feat(sites, betas, isY = False):
-# Expects two aligned arrays of nX1 and nXk
-# If isY = True, return betas in (n*k)X1 array, no offsetting
-# Returns (n*k)X5 array feat: site loc, dist to prev loc, prev beta, dist to next loc, next beta
-	if len(betas.shape) == 1:
-		feat = np.zeros((len(sites),5))
-		if isY:
-			feat = betas
-		else:	
-			feat[:,0] = sites
-			feat[1:,1] = np.abs(sites[:-1] - sites[1:])
-			feat[1:,2] = betas[:-1]
-			feat[:-1,3] = np.abs(sites[:-1]-sites[1:])
-			feat[:-1,4] = betas[1:]
-			# Fill in corner cases
-			feat[0,1] = np.abs(sites[0]-sites[1])
-			feat[0,2] = betas[1]
-			feat[-1,3] = np.abs(sites[-1] - sites[-2])
-			feat[-1,4] = betas[-2]
-		return feat
-	else:
-		feats = np.empty((len(sites),5))
-		for i in range(betas.shape[1]):
-			feat = np.zeros((len(sites),5))
-			if isY:
-				feat = betas[:,i]
-			else:
-				feat[:,0] = sites
-				feat[1:,1] = np.abs(sites[:-1] - sites[1:])
-				feat[1:,2] = betas[:-1,i]
-				feat[:-1,3] = np.abs(sites[:-1]-sites[1:])
-				feat[:-1,4] = betas[1:,i]
-				# Fill in corner cases
-				feat[0,1] = np.abs(sites[0]-sites[1])
-				feat[0,2] = betas[1,i]
-				feat[-1,3] = np.abs(sites[-1] - sites[-2])
-				feat[-1,4] = betas[-2,i]
-			if i == 0:
-				feats = feat
-			else:
-				feats = np.vstack((feats,feat))
-			
-		return feats
-
 def calc_r2_RMSE(preds, gTruth, intercept = 0):
 # Expects two 'Beta' both of size nX1
 # Accepts an intercept and calc's accordingly
@@ -106,10 +62,10 @@ def read_bed_dat_sample(mypath, chrom=1, addIsland=False, Island=False):
 	island = np.loadtxt(mypath + PRE_FNAME + str(chrom) + SAMPLE_INAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
                                                                         ('End', np.int32), ('Strand', np.str_, 1), \
                                                                         ('Beta', np.float32), ('450k', np.int8)])
-        if Island and chrom==1:
+	if Island and chrom==1:
 		return island
 	if addIsland and chrom==1:
-                return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
+		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
 	else:
 		return bed
 
@@ -141,22 +97,12 @@ def read_bed_dat_train(mypath, chrom=1, addIsland=False, Island=False):
                                                                         ('Beta', np.float32, (33)), ('450k', np.int8)])
 	if Island and chrom==1:
 		return island
-        if addIsland and chrom==1:
-                return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
+	if addIsland and chrom==1:
+		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
 	else:
 		return bed
 
 
-#def storePreds(path, yHats, paras, start_time):
-# Stores data to disk in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
-# path = directory file will be created
-# yHats = array that will be entered as text, one row per line
-# paras = string to be inserted as part of filename
-# start_time = a time.time() to be subtracted at file create to indicate a running time
-	#outfile= open(path+"predictions_"+str(paras)+"_csec="+str(int(time.time()-start_time))+".txt", 'w')
-	#outfile.write(paras+"\n")
-	#outfile.write("\n".join(yHats))
-	#outfile.close()
 def storePreds(path, yHats, paras, start_time):
 # Stores ndarray to txt in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
 # paras also written as a comment to first line

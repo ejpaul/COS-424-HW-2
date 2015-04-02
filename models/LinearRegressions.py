@@ -9,7 +9,6 @@ from optparse import OptionParser
 import sklearn.linear_model as sklm
 import UtilityFunctions
 import FillData
-import RandomForest
 
 FEAT_LIST = ['Beta', 'Island']
 #FEAT_LIST = 'Beta'
@@ -84,7 +83,6 @@ def main(argv):
             test = UtilityFunctions.read_bed_dat_test(path,chrom, addIsland=getIslands)
             #Prep data
             (trainX, sample_y, trainXstars, test_y) = get_X_y_Xstar_gTruth(train.copy(), sample.copy(), test.copy(), nanOpt)
-            #(trainX, sample_y, trainXstars, test_y) = RandomForest.feat_all_samples(train['Start'].copy(), train['Beta'].copy(), sample.copy(), test.copy())
         
         #Linear Regression
         if lin:
@@ -116,7 +114,7 @@ def main(argv):
             UtilityFunctions.storePreds(path, ridgeRegr.coef_, paras, ridge_start_time)
         
         if las:
-            #Lasso regression -- something is very broken here, produces negative r^2 values!!
+            #Lasso regression
             lasso_start_time = time.time()
             alpha = 0.001
             lassoRegr = sklm.Lasso(alpha = alpha)
