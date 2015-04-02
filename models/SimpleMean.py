@@ -4,10 +4,10 @@ Created on Mar 25, 2015
 @author: epaul626
 '''
 import numpy as np
-import sys
+import sys, time
 from optparse import OptionParser
 sys.path.append('../utils/')
-from UtilityFunctions import read_bed_dat_train, read_bed_dat_sample
+from UtilityFunctions import *
 
 # Uses empirical mean of training data at CpG site to predict NaN data in the 
 # sample file. 
@@ -32,12 +32,25 @@ def main(argv):
 	parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
 	(options, args) = parser.parse_args()
 	path = options.path
+
+	time_start = time.time()
 	train = read_bed_dat_train(path)
 	sample = read_bed_dat_sample(path)
+	# Pull Testing data
 	test = read_bed_dat_test(path)
+	gTruth = test['Beta'][sample['450k']==0]
+	gTruth = gTruth[~np.isnan(gTruth)]
+	# Predict using simple mean 
+	pred_time = time.time()
 	predict = predict_simple_mean(train['Beta'], sample['Beta'])
-	print "Empirical Mean Prediction: %s" % predict
-	(r2, RMSE) = calc_r2_RMSE(yHats, test_y)
+	predict = predict[sample['450k']==0]
+	predict = predict[~np.isnan(gTruth)]
+	print "Empirical Mean Prediction"
+	(r2, RMSE) = calc_r2_RMSE(predict, gTruth)
+	print "r2: %s" % r2
+	print "RMSE: %s" % RMSE
+	print "Prediction time: %s" % (time.time() - pred_time)
+	print "Elapsed time: %s" % (time.time() - time_start)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
