@@ -97,37 +97,52 @@ def insert_island_data(bed, islandFile, isTrain=False):
 		new['Island'][np.where(new['Start'] == inFile['Start'][i])] = True
 	return new
 
-def read_bed_dat_sample(mypath, chrom=1, addIsland=False):
+def read_bed_dat_sample(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + SAMPLE_FNAME
 # chrom defaults to 1 
 	bed = np.loadtxt(mypath + PRE_FNAME + str(chrom) + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
+	island = np.loadtxt(mypath + PRE_FNAME + str(chrom) + SAMPLE_INAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+                                                                        ('End', np.int32), ('Strand', np.str_, 1), \
+                                                                        ('Beta', np.float32), ('450k', np.int8)])
+        if Island and chrom==1:
+		return island
 	if addIsland and chrom==1:
-		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + SAMPLE_INAME)
+                return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
 	else:
 		return bed
 
-def read_bed_dat_test(mypath, chrom=1, addIsland=False):
+def read_bed_dat_test(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + TEST_FNAME
 # chrom defaults to 1 
 	bed = np.loadtxt(mypath + PRE_FNAME + str(chrom) + TEST_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
+	island = np.loadtxt(mypath + PRE_FNAME + str(chrom) + TEST_INAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+                                                                        ('End', np.int32), ('Strand', np.str_, 1), \
+                                                                        ('Beta', np.float32), ('450k', np.int8)])
+	if Island and chrom==1:
+		return island
 	if addIsland and chrom==1:
 		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
 	else:
 		return bed
 
 
-def read_bed_dat_train(mypath, chrom=1, addIsland=False):
+def read_bed_dat_train(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + TRAIN_FNAME
 # chrom defaults to 1 
 	bed = np.loadtxt(mypath + PRE_FNAME + str(chrom) + TRAIN_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32, (33)), ('450k', np.int8)])
-	if addIsland and chrom==1:
-		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TRAIN_INAME, True)
+	island = np.loadtxt(mypath + PRE_FNAME + str(chrom) + TRAIN_INAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+                                                                        ('End', np.int32), ('Strand', np.str_, 1), \
+                                                                        ('Beta', np.float32, (33)), ('450k', np.int8)])
+	if Island and chrom==1:
+		return island
+        if addIsland and chrom==1:
+                return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
 	else:
 		return bed
 
