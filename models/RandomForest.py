@@ -15,39 +15,35 @@ from FillData import *
 # Treats each CpG site at each sample as its own sample
 # Rather than as features for a given CpG site
 def feat_all_samples(sites, train_beta, sample, test):
-	X = np.zeros((len(train_beta)*33, 6))
-	Y = np.zeros((len(train_beta)*33, ))
-        for i in range(0, len(train_beta)):
-                # Find 2 nearest neighbors to site i
-                (indices,distance)  = find_neighbors(sites, i)
-                index1 = indices[0]
-                index2 = indices[1]
-		for j in range(0, 33):
-			k = i*33 + j
-			# Feature 1: beta at neighbor 1
-			X[k, 0] = train_beta[i+index1, j]
-			# Feature 2: distance to neighbor 1
-			X[k, 1] = distance[0]
-			# Feature 3: beta at neighbor 2
-			X[k, 2] = train_beta[i+index2, j]
-			# Feature 4: distance to neighbor 2
-			X[k, 3] = distance[1]
-			# Feature 3: CpG start site
-			X[k, 4] = sites[i]
-			# Feature 5: Sample number
-			X[k, 5] = j
-			# Beta value at sample site
-			Y[k] = train_beta[i, j]
+# 5 X features
+# Feature 1: CpG start site
+# Feature 2: distance to neighbor 1
+# Feature 3: beta at neighbor 1
+# Feature 4: distance to neighbor 2
+# Feature 5: beta at neighbor 2
+# Y: Beta value at sample site
+	X = sites_beta_to_feat(sites, train_beta)
+	Y = sites_beta_to_feat(sites, train_beta, True)
 
 	# Predict on feature set not on 450k chip
-        Xstar = X[sample['450k']==0]
-        gTruth = test['Beta'][sample['450k']==0]
-        Xstar = Xstar[~np.isnan(gTruth)]
-        gTruth = gTruth[~np.isnan(gTruth)]	
+	Xstar = sample[sample['450k']==0]
+	gTruth = test[sample['450k']==0]
+	Xstar = sites_beta_to_feat(Xstar['Start'], Xstar['Beta'])
+	gTruth = sites_beta_to_feat(gTruth['Start'], gTruth['Beta'], True)
+	Xstar = Xstar[~np.isnan(gTruth)]
+	gTruth = gTruth[~np.isnan(gTruth)]
+	gTruth = gTruth[~np.isnan(Xstar[:,2])]
+	gTruth = gTruth[~np.isnan(Xstar[:,4])]
+	Xstar = Xstar[~np.isnan(Xstar[:,2])]
+	Xstar = Xstar[~np.isnan(Xstar[:,4])]
 
-	# Only train on non-NaN values of Y
-        X = X[~np.isnan(Y)]
+	# Only train on non-NaN values of X & Y
+	X = X[~np.isnan(Y)]
 	Y = Y[~np.isnan(Y)]
+	Y = Y[~np.isnan(X[:,2])]
+	Y = Y[~np.isnan(X[:,4])]
+	X = X[~np.isnan(X[:,2])]
+	X = X[~np.isnan(X[:,4])]
 	return (X, Y, Xstar, gTruth)
 
 # Produces 'X' feature array of nearest neighbor beta values that will be fed

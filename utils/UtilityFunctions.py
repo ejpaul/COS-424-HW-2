@@ -13,21 +13,49 @@ TRAIN_FNAME = "_cutoff_20_train_revised.bed"
 SAMPLE_FNAME = "_cutoff_20_sample.bed"
 TEST_FNAME = "_cutoff_20_test.bed"
 
-def sites_beta_to_feat(sites, betas):
-# Expects two nX1 aligned arrays
-# Returns nX5 array feat: site loc, dist to prev loc, prev beta, dist to next loc, next beta
-	feat = np.zeros((len(sites),5))
-	feat[:,0] = sites
-	feat[1:,1] = np.abs(sites[:-1] - sites[1:])
-	feat[1:,2] = betas[:-1]
-	feat[:-1,3] = np.abs(sites[:-1]-sites[1:])
-	feat[:-1,4] = betas[1:]
-	# Fill in corner cases
-	feat[0,1] = np.abs(sites[0]-sites[1])
-	feat[0,2] = betas[1]
-	feat[-1,3] = np.abs(sites[-1] - sites[-2])
-	feat[-1,4] = betas[-2]
-	return feat
+def sites_beta_to_feat(sites, betas, isY = False):
+# Expects two aligned arrays of nX1 and nXk
+# If isY = True, return betas in (n*k)X1 array, no offsetting
+# Returns (n*k)X5 array feat: site loc, dist to prev loc, prev beta, dist to next loc, next beta
+	if len(betas.shape) == 1:
+		feat = np.zeros((len(sites),5))
+		if isY:
+			feat = betas
+		else:	
+			feat[:,0] = sites
+			feat[1:,1] = np.abs(sites[:-1] - sites[1:])
+			feat[1:,2] = betas[:-1]
+			feat[:-1,3] = np.abs(sites[:-1]-sites[1:])
+			feat[:-1,4] = betas[1:]
+			# Fill in corner cases
+			feat[0,1] = np.abs(sites[0]-sites[1])
+			feat[0,2] = betas[1]
+			feat[-1,3] = np.abs(sites[-1] - sites[-2])
+			feat[-1,4] = betas[-2]
+		return feat
+	else:
+		feats = []
+		for i in range(betas.shape[1]):
+			feat = np.zeros((len(sites),5))
+			if isY:
+				feat = betas[:,i]
+			else:
+				feat[:,0] = sites
+				feat[1:,1] = np.abs(sites[:-1] - sites[1:])
+				feat[1:,2] = betas[:-1,i]
+				feat[:-1,3] = np.abs(sites[:-1]-sites[1:])
+				feat[:-1,4] = betas[1:,i]
+				# Fill in corner cases
+				feat[0,1] = np.abs(sites[0]-sites[1])
+				feat[0,2] = betas[1,i]
+				feat[-1,3] = np.abs(sites[-1] - sites[-2])
+				feat[-1,4] = betas[-2,i]
+				if i == 0:
+					feats = feat
+				else:
+					np.vstack((feats,feat))
+			
+		return feats
 
 def calc_r2_RMSE(preds, gTruth, intercept = 0):
 # Expects two 'Beta' both of size nX1
