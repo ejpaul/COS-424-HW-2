@@ -10,8 +10,11 @@ from optparse import OptionParser
 
 PRE_FNAME = "intersected_final_chr"
 TRAIN_FNAME = "_cutoff_20_train_revised.bed"
+TRAIN_INAME = "_cutoff_20_train_revised_island.bed"
 SAMPLE_FNAME = "_cutoff_20_sample.bed"
+SAMPLE_INAME = "_cutoff_20_sample_island.bed"
 TEST_FNAME = "_cutoff_20_test.bed"
+TEST_INAME = "_cutoff_20_test_island.bed"
 
 def sites_beta_to_feat(sites, betas, isY = False):
 # Expects two aligned arrays of nX1 and nXk
@@ -34,7 +37,7 @@ def sites_beta_to_feat(sites, betas, isY = False):
 			feat[-1,4] = betas[-2]
 		return feat
 	else:
-		feats = []
+		feats = np.empty((len(sites),5))
 		for i in range(betas.shape[1]):
 			feat = np.zeros((len(sites),5))
 			if isY:
@@ -50,10 +53,10 @@ def sites_beta_to_feat(sites, betas, isY = False):
 				feat[0,2] = betas[1,i]
 				feat[-1,3] = np.abs(sites[-1] - sites[-2])
 				feat[-1,4] = betas[-2,i]
-				if i == 0:
-					feats = feat
-				else:
-					np.vstack((feats,feat))
+			if i == 0:
+				feats = feat
+			else:
+				feats = np.vstack((feats,feat))
 			
 		return feats
 
@@ -77,26 +80,57 @@ def calc_r2_RMSE(preds, gTruth, intercept = 0):
 		r2 = 1 - (rss / tss)
 		return (r2, rmse)
 
-def read_bed_dat_sample(mypath, chrom=1):
+def insert_island_data(bed, islandFile, isTrain=False):
+# Accepts nadrray and a full path to the island bed to read
+# Returns new ndarray with new 'Island' boolean field
+	new = np.empty(bed.shape, dtype = bed.dtype.descr + [('Island', np.bool)])
+	for col in bed.dtype.names:
+		new[col] = bed[col]
+	new['Island'] = False
+	dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), ('Strand', np.str_, 1), \
+									('Beta', np.float32), ('450k', np.int8)]
+	if isTrain:
+		dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), ('Strand', np.str_, 1), \
+									('Beta', np.float32, (33)), ('450k', np.int8)]
+	inFile = np.loadtxt(islandFile, dtype)
+	for i in range(len(inFile)):
+		new['Island'][np.where(new['Start'] == inFile['Start'][i])] = True
+	return new
+
+def read_bed_dat_sample(mypath, chrom=1, addIsland=False):
 # Accepts path to location of PRE_FNAME + chrom + SAMPLE_FNAME
 # chrom defaults to 1 
-	return np.loadtxt(mypath + PRE_FNAME + str(chrom) + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+	bed = np.loadtxt(mypath + PRE_FNAME + str(chrom) + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
+	if addIsland and chrom==1:
+		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + SAMPLE_INAME)
+	else:
+		return bed
 
-def read_bed_dat_test(mypath, chrom=1):
+def read_bed_dat_test(mypath, chrom=1, addIsland=False):
 # Accepts path to location of PRE_FNAME + chrom + TEST_FNAME
 # chrom defaults to 1 
-	return np.loadtxt(mypath + PRE_FNAME + str(chrom) + TEST_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+	bed = np.loadtxt(mypath + PRE_FNAME + str(chrom) + TEST_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
+	if addIsland and chrom==1:
+		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
+	else:
+		return bed
 
-def read_bed_dat_train(mypath, chrom=1):
+
+def read_bed_dat_train(mypath, chrom=1, addIsland=False):
 # Accepts path to location of PRE_FNAME + chrom + TRAIN_FNAME
 # chrom defaults to 1 
-	return np.loadtxt(mypath + PRE_FNAME + str(chrom) + TRAIN_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+	bed = np.loadtxt(mypath + PRE_FNAME + str(chrom) + TRAIN_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32, (33)), ('450k', np.int8)])
+	if addIsland and chrom==1:
+		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TRAIN_INAME, True)
+	else:
+		return bed
+
 
 #def storePreds(path, yHats, paras, start_time):
 # Stores data to disk in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
