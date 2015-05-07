@@ -94,7 +94,7 @@ def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 # If chrom == 0, read file containing full genome data
 # Return record dtype nparray
 	if chrom == 0:
-		chrom_s = ''
+		chrom_s = 'all'
 	else:
 		chrom_s = 'chr' + str(chrom)
 
@@ -109,12 +109,17 @@ def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 	else:
 		raise RuntimeError('Bad bed type name')
 	
+	dt = [('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
+		('Strand', np.str_, 1), ('Beta', np.float32, (beta_len)), ('450k', np.byte)]
+	if ftype == 'train' or ftype == 'sample':
+		dt += [('Exon', np.byte), ('DHS', np.int8), ('CGI', np.byte)]
+
 # 	cols = (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,-1)
 	
-	return np.loadtxt(mypath + chrom_s + fname, \
-					dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
-						('Strand', np.str_, 1), ('Beta', np.float32, (beta_len)), ('450k', np.int8), \
-						('Exon', np.byte), ('DHS', np.int8), ('CGI', np.byte)])
+	return np.loadtxt(mypath + chrom_s + fname, dtype = dt)
+# 					dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
+# 						('Strand', np.str_, 1), ('Beta', np.float32, (beta_len)), ('450k', np.int8), \
+# 						('Exon', np.byte), ('DHS', np.int8), ('CGI', np.byte)])
 
 
 def read_bed_dat_train_feat(mypath, chrom=1):

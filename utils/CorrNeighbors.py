@@ -22,20 +22,18 @@ def get_upstream(train):
 # Expects array of 'Beta'
 # Returns array of upstream neighbor values for each site
 # of same shape
-	upstream = np.roll(train, 1)
-	upstream = upstream[0:-2]
-	# Insert 0s for last row
-	np.insert(upstream, -1, 0)
+	upstream = np.empty_like(train)
+	upstream[1:] = train[:-1]
+	upstream[0] = 0
 	return upstream
 
 def get_downstream(train):
 # Expects array of 'Beta'
 # Returns array of downstream neighbor values for each site
 # of same shape
-	downstream = np.roll(train, len(train)-1)
-	downstream = downstream[1:-1]
-	# Insert 0s for first row
-	np.insert(downstream, 0, 0)
+	downstream = np.empty_like(train)
+	downstream[:-1] = train[1:]
+	downstream[-1] = 0
 	return downstream
 
 def corr_calc(train, neighb):
