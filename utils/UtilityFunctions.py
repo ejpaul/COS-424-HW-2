@@ -15,7 +15,9 @@ SAMPLE_FNAME = "_cutoff_20_sample.bed"
 SAMPLE_INAME = "_cutoff_20_sample_island.bed"
 TEST_FNAME = "_cutoff_20_test.bed"
 TEST_INAME = "_cutoff_20_test_island.bed"
-INTERSECT_FNAME = "_train_exon_HDS.bed"
+INT_TR_FNAME = "_train_full_feats.bed"
+INT_S_FNAME = "_sample_full_feats.bed"
+INT_TE_FNAME = "_test_full_feats.bed"
 
 def calc_r2_RMSE(preds, gTruth, intercept = 0):
 # Expects two 'Beta' both of size nX1
@@ -87,11 +89,43 @@ def read_bed_dat_test(mypath, chrom=1, addIsland=False, Island=False):
 	else:
 		return bed
 
+def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
+# Read featured bed file from mypath of type given by ftype
+# If chrom == 0, read file containing full genome data
+# Return record dtype nparray
+	if chrom == 0:
+		chrom_s = ''
+	else:
+		chrom_s = 'chr' + str(chrom)
+
+	beta_len = 1
+	if ftype == 'train':
+		fname = INT_TR_FNAME
+		beta_len = 33
+	elif ftype == 'sample':
+		fname = INT_S_FNAME
+	elif ftype == 'test':
+		fname = INT_TE_FNAME
+	else:
+		raise RuntimeError('Bad bed type name')
+	
+# 	cols = (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,-1)
+	
+	return np.loadtxt(mypath + chrom_s + fname, \
+					dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
+						('Strand', np.str_, 1), ('Beta', np.float32, (beta_len)), ('450k', np.int8), \
+						('Exon', np.byte), ('DHS', np.int8), ('CGI', np.byte)])
+
+
 def read_bed_dat_train_feat(mypath, chrom=1):
-# Accepts path to location of intersected bedfiles
-# chrom defaults to 1
-	train = np.loadtxt(mypath + 'chr' + str(chrom) + INTERSECT_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), ('Strand', np.str_, 1), ('Beta', np.float32, (33)), ('450k', np.int8), ('Exon', np.int8), ('DHS', np.int8)], usecols=(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,-1))
-	return train
+# read_bed_dat_feat wrapper for train beds
+	return read_bed_dat_feat(mypath, chrom, 'train')
+def read_bed_dat_test_feat(mypath, chrom=1):
+# read_bed_dat_feat wrapper for test beds
+	return read_bed_dat_feat(mypath, chrom, 'test')
+def read_bed_dat_sample_feat(mypath, chrom=1):
+# read_bed_dat_feat wrapper for sample beds
+	return read_bed_dat_feat(mypath, chrom, 'sample')
 
 def read_bed_dat_train(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + TRAIN_FNAME
