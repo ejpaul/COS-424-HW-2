@@ -22,17 +22,21 @@ def get_upstream(train):
 # Expects array of 'Beta'
 # Returns array of upstream neighbor values for each site
 # of same shape
-	train = train[0:-2]
 	upstream = np.roll(train, 1)
-	return train, upstream
+	upstream = upstream[0:-2]
+	# Insert 0s for last row
+	np.insert(upstream, -1, 0)
+	return upstream
 
 def get_downstream(train):
 # Expects array of 'Beta'
 # Returns array of downstream neighbor values for each site
 # of same shape
-	train = train[1:-1]
 	downstream = np.roll(train, len(train)-1)
-	return train, downstream
+	downstream = downstream[1:-1]
+	# Insert 0s for first row
+	np.insert(downstream, 0, 0)
+	return downstream
 
 def corr_calc(train, neighb):
 # Expects array of 'Beta' and array of neighbors of same shape
@@ -46,6 +50,23 @@ def corr_calc(train, neighb):
 		corr[i] = pearsonr(train[i], neighb[i])[0]
 	return corr
 
+def corr_neighb(train, neighb):
+# For each position, calculate correlation of beta with neighbor 
+# Uses 0.5 cutoff for correlation value of feature
+	corr = corr_calc(train, neighb)
+	feat = corr*neighb
+	return feat	
+	
+def dist_neighb(train, neighb):
+# Weights beta value at neighbor by 1/dist for input as feature vector
+# Train and neighb are entire csv file, not just betas
+	start_train = train['Start']
+	start_neighb = neighb['Start']
+	dist = np.abs(start_train - start_neighb)
+	weight = 1./dist
+	feat = neighb['Beta']*weight
+	return feat	
+
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-p", "--path", dest="path", help='read bed data from PATH', metavar='PATH')
@@ -54,10 +75,14 @@ def main(argv):
 	train = read_bed_dat_train(path)
 	beta = train['Beta']
 	
-	orig, neighb = get_downstream(beta)
-	corr = corr_calc(orig, neighb)
+	neighb = get_downstream(beta)
+	corr = corr_calc(beta, neighb)
 
 	P.hist(corr, range=(-1,1),bins=30)
+
+	P.figure()
+	start = train['Start']
+	P.plot(start, corr, 'r.')
 	P.show()
 
 if __name__ == '__main__':
