@@ -8,7 +8,7 @@ import numpy as np
 import sys, time
 from optparse import OptionParser
 
-PRE_FNAME = "intersected_final_chr"
+PRE_FNAME = "intersected_final_"
 TRAIN_FNAME = "_cutoff_20_train_revised.bed"
 TRAIN_INAME = "_cutoff_20_train_revised_island.bed"
 SAMPLE_FNAME = "_cutoff_20_sample.bed"
@@ -56,36 +56,67 @@ def insert_island_data(bed, islandFile, isTrain=False):
 		new['Island'][np.where(new['Start'] == inFile['Start'][i])] = True
 	return new
 
+def read_bed_dat_train(mypath, chrom=1, addIsland=False, Island=False):
+# Accepts path to location of PRE_FNAME + chrom + TRAIN_FNAME
+# chrom defaults to 1 
+	if chrom == 0:
+		chrom_s = 'all'
+	else:
+		chrom_s = 'chr' + str(chrom)
+
+	if Island and chrom==1:
+		return np.loadtxt(mypath + PRE_FNAME + chrom_s + TRAIN_INAME, \
+						dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
+							('Strand', np.str_, 1), ('Beta', np.float32, (33)), ('450k', np.int8)])
+
+	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + TRAIN_FNAME, \
+					dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
+						('Strand', np.str_, 1), ('Beta', np.float32, (33)), ('450k', np.int8)])
+	if addIsland and chrom==1:
+		return insert_island_data(bed, mypath + PRE_FNAME + chrom_s + TEST_INAME)
+	else:
+		return bed
+
 def read_bed_dat_sample(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + SAMPLE_FNAME
 # chrom defaults to 1 
+	if chrom == 0:
+		chrom_s = 'all'
+	else:
+		chrom_s = 'chr' + str(chrom)
+
 	if Island and chrom==1:
-		return np.loadtxt(mypath + PRE_FNAME + str(chrom) + SAMPLE_INAME, \
+		return np.loadtxt(mypath + PRE_FNAME + chrom_s + SAMPLE_INAME, \
 						dtype=[('Chrom', np.str_, 4), ('Start', np.int32),
 							('End', np.int32), ('Strand', np.str_, 1), \
 							('Beta', np.float32), ('450k', np.int8)])
 
-	bed = np.loadtxt(mypath + PRE_FNAME + str(chrom) + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
 	if addIsland and chrom==1:
-		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
+		return insert_island_data(bed, mypath + PRE_FNAME + chrom_s + TEST_INAME)
 	else:
 		return bed
 
 def read_bed_dat_test(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + TEST_FNAME
 # chrom defaults to 1 
+	if chrom == 0:
+		chrom_s = 'all'
+	else:
+		chrom_s = 'chr' + str(chrom)
+
 	if Island and chrom==1:
-		return np.loadtxt(mypath + PRE_FNAME + str(chrom) + TEST_INAME, \
+		return np.loadtxt(mypath + PRE_FNAME + chrom_s + TEST_INAME, \
 						dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
 							('Strand', np.str_, 1), ('Beta', np.float32), ('450k', np.int8)])
 
-	bed = np.loadtxt(mypath + PRE_FNAME + str(chrom) + TEST_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + TEST_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
 	if addIsland and chrom==1:
-		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
+		return insert_island_data(bed, mypath + PRE_FNAME + chrom_s + TEST_INAME)
 	else:
 		return bed
 
@@ -94,6 +125,9 @@ def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 # If chrom == 0, read file containing full genome data
 # Return record dtype nparray
 # Note - removed 'test' option since this does not have full features
+	if ftype == 'test':
+		return read_bed_dat_test(mypath, chrom=chrom)
+
 	if chrom == 0:
 		chrom_s = 'all'
 	else:
@@ -119,10 +153,6 @@ def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 		cols = (0,1,2,3,4,5,6,-3,-1)
 
 	return np.loadtxt(mypath + chrom_s + fname, dtype = dt, usecols=cols)
-# 					dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
-# 						('Strand', np.str_, 1), ('Beta', np.float32, (beta_len)), ('450k', np.int8), \
-# 						('Exon', np.byte), ('DHS', np.int8), ('CGI', np.byte)])
-
 
 def read_bed_dat_train_feat(mypath, chrom=1):
 # read_bed_dat_feat wrapper for train beds
@@ -133,23 +163,6 @@ def read_bed_dat_test_feat(mypath, chrom=1):
 def read_bed_dat_sample_feat(mypath, chrom=1):
 # read_bed_dat_feat wrapper for sample beds
 	return read_bed_dat_feat(mypath, chrom, 'sample')
-
-def read_bed_dat_train(mypath, chrom=1, addIsland=False, Island=False):
-# Accepts path to location of PRE_FNAME + chrom + TRAIN_FNAME
-# chrom defaults to 1 
-	if Island and chrom==1:
-		return np.loadtxt(mypath + PRE_FNAME + str(chrom) + TRAIN_INAME, \
-						dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
-							('Strand', np.str_, 1), ('Beta', np.float32, (33)), ('450k', np.int8)])
-
-	bed = np.loadtxt(mypath + PRE_FNAME + str(chrom) + TRAIN_FNAME, \
-					dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
-						('Strand', np.str_, 1), ('Beta', np.float32, (33)), ('450k', np.int8)])
-	if addIsland and chrom==1:
-		return insert_island_data(bed, mypath + PRE_FNAME + str(chrom) + TEST_INAME)
-	else:
-		return bed
-
 
 def storePreds(path, yHats, paras, start_time):
 # Stores ndarray to txt in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
@@ -162,6 +175,7 @@ def main(argv):
 	parser.add_option("-p", "--path", dest="path", help='read bed data from PATH', metavar='PATH')
 	(options, _args) = parser.parse_args()     
 	path = options.path
+	print "PATH = " + path
 
 	train_feat_all = read_bed_dat_feat(path, chrom=1)
 	sample_feat_all = read_bed_dat_feat(path, chrom=1, ftype='sample')
