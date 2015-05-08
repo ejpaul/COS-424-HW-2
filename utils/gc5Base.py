@@ -57,7 +57,10 @@ def gc5Base_intersect_to_bed(gcpathname, sites, window=400):
                         last_tell += len(line)
                 else:
                     break
-            gc_prop[i] /= float(cur_window)
+            if cur_window == 0:
+                gc_prop[i] = 0
+            else:
+                gc_prop[i] /= float(cur_window)
     gcf.close()
     GCs = np.array(gc_prop, dtype='S10')
     return GCs

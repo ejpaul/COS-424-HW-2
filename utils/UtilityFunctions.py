@@ -113,7 +113,7 @@ def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 	if ftype == 'train' or ftype == 'sample':
 		dt += [('Exon', np.byte), ('DHS', np.int8), ('CGI', np.byte)]
 
- 	if ftype == 'train':
+	if ftype == 'train':
 		cols = (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,-3,-1)
 	if ftype == 'sample':
 		cols = (0,1,2,3,4,5,6,-3,-1)
@@ -165,8 +165,9 @@ def main(argv):
 
 	train_feat_all = read_bed_dat_feat(path, chrom=1)
 	sample_feat_all = read_bed_dat_feat(path, chrom=1, ftype='sample')
+	test_feat_all = read_bed_dat_feat(path, chrom=1, ftype='test')
 	print "train_feat_all[0] = %s" % train_feat_all[0]
-        print "sample_feat_all[0] = %s" % sample_feat_all[0]
+	print "sample_feat_all[0] = %s" % sample_feat_all[0]
 
 	train = read_bed_dat_train(path)
 	sample = read_bed_dat_sample(path)
