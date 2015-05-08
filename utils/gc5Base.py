@@ -43,15 +43,15 @@ def gc5Base_intersect_to_bed(gcpathname, sites, window=400):
                     cur_pos = int(line[:delim])
                     if cur_pos + 4 >= site_min:
                         if cur_pos >= site_min and cur_pos + 4 <= site_max:
-                            gc_prop[i] += int(line[delim+1:-1])
+                            gc_prop[i] += float(line[delim+1:-1])
                             cur_window += 5
                         elif cur_pos > site_max:
                             break
                         elif cur_pos < site_min:
-                            gc_prop[i] += (int(line[delim+1:-1]) * (5-(site_min - cur_pos)))/ 5
+                            gc_prop[i] += (float(line[delim+1:-1]) * (5-(site_min - cur_pos)))/ 5
                             cur_window += 5 - (site_min - cur_pos)
                         else:
-                            gc_prop[i] += (int(line[delim+1:-1]) * (5-(site_max - cur_pos)))/ 5
+                            gc_prop[i] += (float(line[delim+1:-1]) * (5-(site_max - cur_pos)))/ 5
                             cur_window += 5 - (site_max - cur_pos)
                     else:
                         last_tell += len(line)
@@ -88,15 +88,17 @@ def main(argv):
     print "PATH = " + path
     
     if options.gcpathname:
-        train = UtilityFunctions.read_bed_dat_train(path, 1)
-        GCs = np.empty((len(train),4),dtype='S10')
-        GCs[:,0] = train['Chrom']
-        GCs[:,1] = train['Start']
-        GCs[:,2] = train['End']
-        sites = GCs[:,:3]
-#         sites = np.array((train['Chrom'],train['Start'],train['End']))
-        GCs[:,3] = gc5Base_intersect_to_bed(options.gcpathname, sites, window = 10)
-        np.savetxt(path + 'gc_chr1.bed', GCs, fmt='%s')
+        for chrom in range(1,22):
+            train = UtilityFunctions.read_bed_dat_train(path, chrom)
+            GCs = np.empty((len(train),4),dtype='S10')
+            GCs[:,0] = train['Chrom']
+            GCs[:,1] = train['Start']
+            GCs[:,2] = train['End']
+            sites = GCs[:,:3]
+    #         sites = np.array((train['Chrom'],train['Start'],train['End']))
+            window = 400
+            GCs[:,3] = gc5Base_intersect_to_bed(options.gcpathname, sites, window = window)
+            np.savetxt(path + 'gc_chr%s_w=%s.bed' % (str(chrom), str(window)), GCs, fmt='%s')
     
     if options.gcpathname and options.getoffsets:
         gc_offsets = gc5Base_get_chrom_offsets(options.gcpathname)
