@@ -3,14 +3,17 @@ Created on May 7, 2015
 
 @author: jonathanshor
 '''
-import sys
+import sys, time
 import numpy as np
 from optparse import OptionParser
 import UtilityFunctions
-# from __builtin__ import enumerate
 
 DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-OFFSETS = {'1':0, '2':560416768,'3':1154476032,'4':1636007936,'5':2098747392, '6':2536030208, '7':2946803712, '8':3695589376, '9':4043157504, '10':4335620096, '11':4653656064, '12':4971237376, '13':5286854656, '14':5517381632, '15':5729316864, '16':5924708352, '17':6110967808, '18':6294654976, '19':6669289472, '20':6470326272, '21':6884116480, '22':6800637952}
+OFFSETS = {'1':0, '2':560416768,'3':1154476032,'4':1636007936,'5':2098747392, \
+           '6':2536030208, '7':2946803712, '8':3695589376, '9':4043157504, '10':4335620096, \
+           '11':4653656064, '12':4971237376, '13':5286854656, '14':5517381632, \
+           '15':5729316864, '16':5924708352, '17':6110967808, '18':6294654976, \
+           '19':6669289472, '20':6470326272, '21':6884116480, '22':6800637952}
 POS_MIN = 10000
 
 # def gc5Base_intersect_to_bed(gcpathname, path, fnmask, window=400):
@@ -84,13 +87,20 @@ def gc5Base_get_chrom_offsets(gcpathname):
 def main(argv):
     parser = OptionParser()
     parser.add_option("-p", "--path", dest="path", help='read bed data from PATH', metavar='PATH')
-    parser.add_option("-g", dest="gcpathname", help='gc5Base file')
+    parser.add_option("-g", type='string', dest="gcpathname", help='gc5Base file')
+    parser.add_option("-w", type='int', dest="wind", help='window size')
     parser.add_option("-o", dest="getoffsets", action="store_true", default=False)
     (options, _args) = parser.parse_args()     
     path = options.path
     print "PATH = " + path
+    start_time = time.time()
     
     if options.gcpathname:
+        print "GCPath = " + options.gcpathname
+        if options.wind:
+            wind = options.wind
+        else:
+            wind = 400
         for chrom in range(1,22):
             train = UtilityFunctions.read_bed_dat_train(path, chrom)
             GCs = np.empty((len(train),4),dtype='S10')
@@ -99,13 +109,14 @@ def main(argv):
             GCs[:,2] = train['End']
             sites = GCs[:,:3]
     #         sites = np.array((train['Chrom'],train['Start'],train['End']))
-            window = 400
-            GCs[:,3] = gc5Base_intersect_to_bed(options.gcpathname, sites, window = window)
-            np.savetxt(path + 'gc_chr%s_w=%s.bed' % (str(chrom), str(window)), GCs, fmt='%s')
+            GCs[:,3] = gc5Base_intersect_to_bed(options.gcpathname, sites, window = wind)
+            np.savetxt(path + 'gc_chr%s_w=%s.bed' % (str(chrom), str(wind)), GCs, fmt='%s')
     
     if options.gcpathname and options.getoffsets:
         gc_offsets = gc5Base_get_chrom_offsets(options.gcpathname)
         np.savetxt(path + 'gc_offsets.txt', gc_offsets)
+
+    print "Runtime: %f" % (time.time()-start_time)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
