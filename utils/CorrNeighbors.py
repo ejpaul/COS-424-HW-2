@@ -42,11 +42,15 @@ def corr_calc(train, neighb):
 # for correlation calculation
 	# For each position, calculate correlation
 	# of beta with neighboring beta
-	
 	# Vector of correlation coefficients for each site	
 	corr = np.zeros((len(train),))	
 	for i in range(0, len(corr)):
-		corr[i] = pearsonr(train[i], neighb[i])[0]
+		# Clean up nans in train and clean
+		train_clean = train[i][~np.isnan(neighb[i])]
+		neighb_clean = neighb[i][~np.isnan(neighb[i])]
+		train_clean = train_clean[~np.isnan(train_clean)]
+		neighb_clean = neighb_clean[~np.isnan(train_clean)]
+		corr[i] = pearsonr(train_clean, neighb_clean)[0]
 	return corr
 
 # Stores correlation values for upstream and downstream neighbor
