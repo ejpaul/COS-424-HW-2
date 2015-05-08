@@ -17,7 +17,7 @@ TEST_FNAME = "_cutoff_20_test.bed"
 TEST_INAME = "_cutoff_20_test_island.bed"
 INT_TR_FNAME = "_train_full_feats.bed"
 INT_S_FNAME = "_sample_full_feats.bed"
-INT_TE_FNAME = "_test_full.bed"
+All_TE_FNAME = "all_test.bed"
 
 def calc_r2_RMSE(preds, gTruth, intercept = 0):
 # Expects two 'Beta' both of size nX1
