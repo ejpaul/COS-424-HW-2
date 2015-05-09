@@ -9,7 +9,6 @@ from optparse import OptionParser
 from sklearn.ensemble import RandomForestRegressor
 sys.path.append('../utils/')
 import UtilityFunctions as uf
-# from UtilityFunctions import read_bed_dat_feat, calc_r2_RMSE
 from FillData import fill_mean, fill_neighbors
 
 def feat_neighbors(sites, train_beta, train_extras, sample, test):
@@ -19,7 +18,7 @@ def feat_neighbors(sites, train_beta, train_extras, sample, test):
 # Sites is an array of shape (# of CpG sites, ) corresponding to 
 # the start of each bp site
 # train_extras: array of shape (# of CpG sites, 3) which
-	# Adds 3 extra features: Exon, DHS, CGI
+	# Adds 6 extra features: Exon, DHS, CGI, GC_100, GC_400, GC_1000
 	num_extras = train_extras.shape[1]
 	X = np.zeros((len(train_beta), 38+num_extras))
 	for i in range(0, len(train_beta)):
@@ -52,6 +51,59 @@ def feat_neighbors(sites, train_beta, train_extras, sample, test):
 	X = X[~np.isnan(sample['Beta'])]
 	Y = sample['Beta'][~np.isnan(sample['Beta'])]
 	return (X, Y, Xstar, gTruth)
+
+def feat_neighbors_thresh(sites, train_beta, train_extras, sample, test, corr, thresh):
+# Produces 'X' feature array of nearest neighbor beta values that will be fed
+# into regressor
+# Beta is an array of shape (# of CpG sites, nsamples)
+# Sites is an array of shape (# of CpG sites, ) corresponding to
+# the start of each bp site
+# train_extras: array of shape (# of CpG sites, 3) which
+        # Adds 6 extra features: Exon, DHS, CGI, GC_100, GC_400, GC_1000
+        num_extras = train_extras.shape[1]
+        X = np.zeros((len(train_beta), 38+num_extras))
+        for i in range(0, len(train_beta)):
+                # Feature 1: CpG start site
+                X[i,0] = sites[i]
+                # Find 2 nearest neighbors to site i
+                (indices,distance)  = find_neighbors(sites, i)
+                index1 = indices[0]
+                index2 = indices[1]
+                for j in range(0, 33):
+                        # Feature 2: beta at neighbor 1
+                        X[i, 1] = train_beta[i+index1, j]
+                        # Feature 3: distance to neighbor 1
+                        X[i, 2] = distance[0]
+                        # Feature 4: beta at neighbor 2
+                        X[i, 3] = train_beta[i+index2, j]
+                        # Feature 5: distance to neighbor 2
+                        X[i, 4] = distance[1]
+                        # Features 6-38: 33 sample beta values at CpG site
+                        X[i, 5+j] = train_beta[i, j]
+# Features 39+: Extra features
+        X[:,-num_extras:] = train_extras
+	# Train on sites with > thresh correlation value
+	# Trim off first and last row
+	corr = corr[1:-1]
+	X = X[corr[:,0] > thresh]
+	sample = sample[corr[:,0] > thresh]
+	test = test[corr[:,0] > thresh]
+	corr = corr[corr[:,0] > thresh]
+	X = X[corr[:,1] > thresh]
+	sample = sample[corr[:,1] > thresh]
+	test = test[corr[:,1] > thresh]
+	corr = corr[corr[:,1] > thresh]
+
+        # Predict on feature set not on 450k chip
+        Xstar = X[sample['450k']==0]
+        gTruth = test['Beta'][sample['450k']==0]
+        Xstar = Xstar[~np.isnan(gTruth)]
+        gTruth = gTruth[~np.isnan(gTruth)]
+
+        # Only train on non-NaN values of Y
+        X = X[~np.isnan(sample['Beta'])]
+        Y = sample['Beta'][~np.isnan(sample['Beta'])]
+        return (X, Y, Xstar, gTruth)
 
 # Produces 'X' feature array of nearest neighbor beta values that will be fed
 # into regressor
@@ -134,13 +186,16 @@ def main(argv):
 	parser.add_option("-m", dest="fill_mean", action="store_true", default=False)
 	parser.add_option("-c", dest="chroms", type='int', default=1)
 	parser.add_option("-g", dest="GCwindow", type='int', default=0, help='100,400, or 1000. Else all will be included.')
-	
+	parser.add_option("-t", dest="thresh", type='float', default=0.0, help='Correlation value threshold.')
+	parser.add_option("-e", dest="estimators", type='int', default=20, help='Number of trees in the forest.')
 	(options, _args) = parser.parse_args()
 	path = options.path
-	print "PATH = " + path
+
 # 	fill_n = options.fill_neighb
 	fill_m = options.fill_mean
 	chroms = options.chroms
+	trees = options.estimators
+	thresh = options.thresh
 	start_time = time.time()
 
 	# Read in full feature data
@@ -156,22 +211,27 @@ def main(argv):
 			train_extras = np.c_[train_extras, train['GC_%s' % str(options.GCwindow)]]
 		except ValueError:
 			train_extras = np.c_[train_extras, train['GC_100'], train['GC_400'], train['GC_1000']]
+	else:
+		train_extras = np.c_[train_extras, train['GC_100'], train['GC_400'], train['GC_1000']]
 	train_extras = np.c_[train_extras, uf.read_corrs(path, chroms)]
 	print "train_extras[0]: %s, shape: %s" % (train_extras[1:-1][0], train_extras[1:-1].shape)
 	if fill_m:
 		train_beta = fill_mean(train['Beta'])
 	else:
 		train_beta = fill_neighbors(sites, train['Beta'], 10)
-	#train_beta = fill_rand(train['Beta'])
 # Trim first and last row off to eliminate nan values in corrs
 # Produce feature array 'X' and vector of beta values 'Y'
 # Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
-	(X, Y, Xstar, Ystar) = feat_neighbors(sites[1:-1].copy(), train_beta[1:-1].copy(), \
+	if thresh:
+		(X, Y, Xstar, Ystar) = feat_neighbors_thresh(sites[1:-1].copy(), train_beta[1:-1].copy(), \
+							train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy(), uf.read_corrs(path, chroms), thresh)
+	else:
+		(X, Y, Xstar, Ystar) = feat_neighbors(sites[1:-1].copy(), train_beta[1:-1].copy(), \
 							train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy())	
 	print "X[0]: %s" % X[0]
 	full_feat_start = time.time()
 	# Initialize regressor with default parameters
-	model = RandomForestRegressor(oob_score=True)
+	model = RandomForestRegressor(oob_score=True, n_estimators=trees)
 # Fit regressor using training data
 	model.fit(X, Y)
 # Predict on Xstar values 
@@ -184,7 +244,6 @@ def main(argv):
 	print "oob: " + str(model.oob_score_)
 	print "r2 : %f" % (r2)
 	print "RMSE: %f" % (RMSE)
-
 	print "Total Runtime: %f" % (time.time()-start_time)
 
 if __name__ == '__main__':
