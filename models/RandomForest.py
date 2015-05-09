@@ -8,9 +8,9 @@ import sys, time
 from optparse import OptionParser
 from sklearn.ensemble import RandomForestRegressor
 sys.path.append('../utils/')
-#import UtilityFunctions
-from UtilityFunctions import *
-from FillData import *
+import UtilityFunctions as uf
+# from UtilityFunctions import read_bed_dat_feat, calc_r2_RMSE
+from FillData import fill_mean, fill_neighbors
 
 def feat_neighbors(sites, train_beta, train_extras, sample, test):
 # Produces 'X' feature array of nearest neighbor beta values that will be fed
@@ -132,31 +132,43 @@ def main(argv):
 	parser.add_option("-i", dest="origisland", action="store_true", default=False)
 	parser.add_option("-n", dest="fill_neighb", action="store_true", default=False)
 	parser.add_option("-m", dest="fill_mean", action="store_true", default=False)
+	parser.add_option("-c", dest="chroms", type='int', default=1)
+	parser.add_option("-g", dest="GCwindow", type='int', default=0, help='100,400, or 1000. Else all will be included.')
 	
 	(options, _args) = parser.parse_args()
 	path = options.path
 	print "PATH = " + path
-	fill_neighb = options.fill_neighb
-	fill_mean = options.fill_mean
+# 	fill_n = options.fill_neighb
+	fill_m = options.fill_mean
+	chroms = options.chroms
 	start_time = time.time()
 
 	# Read in full feature data
-	train = read_bed_dat_feat(path, chrom=1, ftype='train')
-	sample = read_bed_dat_feat(path, chrom=1, ftype='sample')
-	test = read_bed_dat_feat(path, chrom=1, ftype='test')
+	train = uf.read_bed_dat_feat(path, chrom=chroms, ftype='train')
+	sample = uf.read_bed_dat_feat(path, chrom=chroms, ftype='sample')
+	test = uf.read_bed_dat_feat(path, chrom=chroms, ftype='test')
 	print "Beds read %s" % (time.time() - start_time)
 	sites = train['Start']
 # Fill in NaNs in training with mean over 33 samples in training bed
 	train_extras = np.c_[train['Exon'], train['DHS'], train['CGI']]
-	if fill_neighb:
-		train_beta = fill_neighbors(sites, train['Beta'], 10)
-	if fill_mean:
+	if options.GCwindow:
+		try:
+			train_extras = np.c_[train_extras, train['GC_%s' % str(options.GCwindow)]]
+		except ValueError:
+			train_extras = np.c_[train_extras, train['GC_100'], train['GC_400'], train['GC_1000']]
+	train_extras = np.c_[train_extras, uf.read_corrs(path, chroms)]
+	print "train_extras[0]: %s, shape: %s" % (train_extras[1:-1][0], train_extras[1:-1].shape)
+	if fill_m:
 		train_beta = fill_mean(train['Beta'])
+	else:
+		train_beta = fill_neighbors(sites, train['Beta'], 10)
 	#train_beta = fill_rand(train['Beta'])
+# Trim first and last row off to eliminate nan values in corrs
 # Produce feature array 'X' and vector of beta values 'Y'
 # Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
-	(X, Y, Xstar, Ystar) = feat_neighbors(sites.copy(), train_beta.copy(), train_extras.copy(), sample.copy(), test.copy())
-	# Add 3 features: Exon, DHS, CGI
+	(X, Y, Xstar, Ystar) = feat_neighbors(sites[1:-1].copy(), train_beta[1:-1].copy(), \
+							train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy())	
+	print "X[0]: %s" % X[0]
 	full_feat_start = time.time()
 	# Initialize regressor with default parameters
 	model = RandomForestRegressor(oob_score=True)
@@ -165,8 +177,7 @@ def main(argv):
 # Predict on Xstar values 
 	Yhat = model.predict(Xstar)
 # Calculate r2 and RMSE
-	(r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
-	print "Intersects with CGIs"
+	(r2, RMSE) = uf.calc_r2_RMSE(Yhat, Ystar)
 	print "Runtime: %f" % (time.time()-full_feat_start)
 	print "RandomForest Runtime: %f" % (time.time()-start_time)
 	print str(model.feature_importances_)
