@@ -9,8 +9,8 @@ from optparse import OptionParser
 from sklearn.ensemble import RandomForestRegressor
 sys.path.append('../utils/')
 #import UtilityFunctions
-from UtilityFunctions import *
-from FillData import *
+from UtilityFunctions import read_bed_dat_feat, calc_r2_RMSE
+from FillData import fill_mean, fill_neighbors
 
 def feat_neighbors(sites, train_beta, train_extras, sample, test):
 # Produces 'X' feature array of nearest neighbor beta values that will be fed
@@ -136,8 +136,8 @@ def main(argv):
 	(options, _args) = parser.parse_args()
 	path = options.path
 	print "PATH = " + path
-	fill_neighb = options.fill_neighb
-	fill_mean = options.fill_mean
+	fill_n = options.fill_neighb
+	fill_m = options.fill_mean
 	start_time = time.time()
 
 	# Read in full feature data
@@ -148,9 +148,9 @@ def main(argv):
 	sites = train['Start']
 # Fill in NaNs in training with mean over 33 samples in training bed
 	train_extras = np.c_[train['Exon'], train['DHS'], train['CGI']]
-	if fill_neighb:
+	if fill_n:
 		train_beta = fill_neighbors(sites, train['Beta'], 10)
-	if fill_mean:
+	if fill_m:
 		train_beta = fill_mean(train['Beta'])
 	#train_beta = fill_rand(train['Beta'])
 # Produce feature array 'X' and vector of beta values 'Y'

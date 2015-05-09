@@ -49,11 +49,11 @@ def read_bed_dat_train(mypath, chrom=1, addIsland=False, Island=False):
 
 	if Island and chrom==1:
 		return np.loadtxt(mypath + PRE_FNAME + chrom_s + TRAIN_INAME, \
-						dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
+						dtype=[('Chrom', np.str_, 5), ('Start', np.int32), ('End', np.int32), \
 							('Strand', np.str_, 1), ('Beta', np.float32, (33)), ('450k', np.int8)])
 
 	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + TRAIN_FNAME, \
-					dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
+					dtype=[('Chrom', np.str_, 5), ('Start', np.int32), ('End', np.int32), \
 						('Strand', np.str_, 1), ('Beta', np.float32, (33)), ('450k', np.int8)])
 	return bed
 
@@ -67,11 +67,11 @@ def read_bed_dat_sample(mypath, chrom=1, addIsland=False, Island=False):
 
 	if Island and chrom==1:
 		return np.loadtxt(mypath + PRE_FNAME + chrom_s + SAMPLE_INAME, \
-						dtype=[('Chrom', np.str_, 4), ('Start', np.int32),
+						dtype=[('Chrom', np.str_, 5), ('Start', np.int32),
 							('End', np.int32), ('Strand', np.str_, 1), \
 							('Beta', np.float32), ('450k', np.int8)])
 
-	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 5), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
 	return bed
@@ -86,10 +86,10 @@ def read_bed_dat_test(mypath, chrom=1, addIsland=False, Island=False):
 
 	if Island and chrom==1:
 		return np.loadtxt(mypath + PRE_FNAME + chrom_s + TEST_INAME, \
-						dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
+						dtype=[('Chrom', np.str_, 5), ('Start', np.int32), ('End', np.int32), \
 							('Strand', np.str_, 1), ('Beta', np.float32), ('450k', np.int8)])
 
-	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + TEST_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
+	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + TEST_FNAME, dtype=[('Chrom', np.str_, 5), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
 	return bed
@@ -116,7 +116,7 @@ def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 	else:
 		raise RuntimeError('Bad bed type name')
 	
-	dt = [('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
+	dt = [('Chrom', np.str_, 5), ('Start', np.int32), ('End', np.int32), \
 		('Strand', np.str_, 1), ('Beta', np.float32, (beta_len)), ('450k', np.byte)]
 	if ftype == 'train' or ftype == 'sample':
 		dt += [('Exon', np.byte), ('DHS', np.int8), ('CGI', np.byte)]
