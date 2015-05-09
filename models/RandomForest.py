@@ -16,8 +16,8 @@ def feat_neighbors(sites, train_beta, sample, test):
 # Produces 'X' feature array of nearest neighbor beta values that will be fed
 # into regressor
 # Beta is an array of shape (# of CpG sites, nsamples)
-# Sites is an array of shape (# of CpG sites, 2) corresponding to 
-# start and ending bp of site
+# Sites is an array of shape (# of CpG sites, ) corresponding to 
+# the start of each bp site
 	X = np.zeros((len(train_beta), 38))
 	for i in range(0, len(train_beta)):
 		# Feature 1: CpG start site
@@ -127,10 +127,11 @@ def main(argv):
 	path = options.path
 	start_time = time.time()
 
-	# Read in data on islands
-	train = read_bed_dat_train(path, Island=True)
-	sample = read_bed_dat_sample(path, Island=True)
-	test = read_bed_dat_test(path, Island=True)
+	# Read in full feature data
+# 	train = read_bed_dat_train(path, Island=True)
+	train = read_bed_dat_feat(path, chrom=1, ftype='train')
+	sample = read_bed_dat_feat(path, chrom=1, ftype='sample')
+	test = read_bed_dat_feat(path, chrom=1, ftype='test')
 	sites = train['Start']
 # Fill in NaNs in training with mean over 33 samples in training bed
 	train_beta = fill_neighbors(sites, train['Beta'], 10)
@@ -139,7 +140,7 @@ def main(argv):
 # Produce feature array 'X' and vector of beta values 'Y'
 # Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
 	(X, Y, Xstar, Ystar) = feat_neighbors(sites.copy(), train_beta.copy(), sample.copy(), test.copy())
-	island_start = time.time()
+	full_feat_start = time.time()
 	# Initialize regressor with default parameters
 	model = RandomForestRegressor(oob_score=True)
 # Fit regressor using training data
@@ -149,7 +150,7 @@ def main(argv):
 # Calculate r2 and RMSE
 	(r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
 	print "Intersects with CGIs"
-	print "Runtime: %f" % (time.time()-island_start)
+	print "Runtime: %f" % (time.time()-full_feat_start)
 	print "RandomForest Runtime: %f" % (time.time()-start_time)
 	print str(model.feature_importances_)
 	print "oob: " + str(model.oob_score_)
