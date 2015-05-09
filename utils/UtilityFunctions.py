@@ -39,23 +39,6 @@ def calc_r2_RMSE(preds, gTruth, intercept = 0):
 		r2 = 1 - (rss / tss)
 		return (r2, rmse)
 
-def insert_island_data(bed, islandFile, isTrain=False):
-# Accepts nadrray and a full path to the island bed to read
-# Returns new ndarray with new 'Island' boolean field
-	new = np.empty(bed.shape, dtype = bed.dtype.descr + [('Island', np.bool)])
-	for col in bed.dtype.names:
-		new[col] = bed[col]
-	new['Island'] = False
-	dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), ('Strand', np.str_, 1), \
-									('Beta', np.float32), ('450k', np.int8)]
-	if isTrain:
-		dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), ('Strand', np.str_, 1), \
-									('Beta', np.float32, (33)), ('450k', np.int8)]
-	inFile = np.loadtxt(islandFile, dtype)
-	for i in range(len(inFile)):
-		new['Island'][np.where(new['Start'] == inFile['Start'][i])] = True
-	return new
-
 def read_bed_dat_train(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + TRAIN_FNAME
 # chrom defaults to 1 
@@ -151,8 +134,11 @@ def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 		cols = (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,-3,-1)
 	if ftype == 'sample':
 		cols = (0,1,2,3,4,5,6,-3,-1)
-
-	return np.loadtxt(mypath + chrom_s + fname, dtype = dt, usecols=cols)
+	# Read in bed file
+	bed_feats = np.loadtxt(mypath + chrom_s + fname, dtype = dt, usecols=cols)
+	# Read in corr file
+	corr = np.loadtxt(mypath + chrom_s + "_train_corr.txt")
+	return bed_feats, corr
 
 def read_bed_dat_train_feat(mypath, chrom=1):
 # read_bed_dat_feat wrapper for train beds
@@ -175,25 +161,13 @@ def main(argv):
 	parser.add_option("-p", "--path", dest="path", help='read bed data from PATH', metavar='PATH')
 	(options, _args) = parser.parse_args()
 	path = options.path
-	print "PATH = " + path
-
-	train_feat_all = read_bed_dat_feat(path, chrom=1)
-	sample_feat_all = read_bed_dat_feat(path, chrom=1, ftype='sample')
-	test_feat_all = read_bed_dat_feat(path, chrom=1, ftype='test')
-	print "train_feat_all[0] = %s" % train_feat_all[0]
-	print "sample_feat_all[0] = %s" % sample_feat_all[0]
-
-	train = read_bed_dat_train(path)
-	sample = read_bed_dat_sample(path)
-	train_feat = read_bed_dat_train_feat(path)
+	
+	train_feat_all, corr = read_bed_dat_feat(path, chrom=1)
+	sample_feat_all, corr = read_bed_dat_feat(path, chrom=1, ftype='sample')
+	test_feat_all, corr = read_bed_dat_feat(path, chrom=1, ftype='test')
 	print "train_feat_all[0] = %s" % train_feat_all[0]
 	print "sample_feat_all[0] = %s" % sample_feat_all[0]
 	print "test_feat_all[0] = %s" % test_feat_all[0]
-	print "train_feat[0] = %s" % train_feat[0]
-	print "sample[0] = %s" % sample[0]
-	print "train[0] = %s" % train[0]
-	print "len(train) = %s" % len(train)
-	print "train['Beta'][0] = %s" % train['Beta'][0]
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
