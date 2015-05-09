@@ -52,6 +52,52 @@ def feat_neighbors(sites, train_beta, train_extras, sample, test):
 	Y = sample['Beta'][~np.isnan(sample['Beta'])]
 	return (X, Y, Xstar, gTruth)
 
+def feat_neighbors_island(sites, train_beta, train_extras, sample, test, island):
+# Produces 'X' feature array of nearest neighbor beta values that will be fed
+# into regressor
+# Beta is an array of shape (# of CpG sites, nsamples)
+# Sites is an array of shape (# of CpG sites, ) corresponding to
+# the start of each bp site
+# train_extras: array of shape (# of CpG sites, 3) which
+        # Adds 6 extra features: Exon, DHS, CGI, GC_100, GC_400, GC_1000
+        num_extras = train_extras.shape[1]
+        X = np.zeros((len(train_beta), 38+num_extras))
+        for i in range(0, len(train_beta)):
+                # Feature 1: CpG start site
+                X[i,0] = sites[i]
+                # Find 2 nearest neighbors to site i
+                (indices,distance)  = find_neighbors(sites, i)
+                index1 = indices[0]
+                index2 = indices[1]
+                for j in range(0, 33):
+                        # Feature 2: beta at neighbor 1
+                        X[i, 1] = train_beta[i+index1, j]
+                        # Feature 3: distance to neighbor 1
+                        X[i, 2] = distance[0]
+                        # Feature 4: beta at neighbor 2
+                        X[i, 3] = train_beta[i+index2, j]
+                        # Feature 5: distance to neighbor 2
+                        X[i, 4] = distance[1]
+                        # Features 6-38: 33 sample beta values at CpG site
+                        X[i, 5+j] = train_beta[i, j]
+        # Features 39+: Extra features
+        X[:,-num_extras:] = train_extras
+	# Select on islands
+	X = X[island == 1]
+        sample = sample[island == 1]
+        test = test[island == 1]
+        # Predict on feature set not on 450k chip
+        Xstar = X[sample['450k']==0]
+        gTruth = test['Beta'][sample['450k']==0]
+        Xstar = Xstar[~np.isnan(gTruth)]
+        gTruth = gTruth[~np.isnan(gTruth)]
+
+        # Only train on non-NaN values of Y
+        X = X[~np.isnan(sample['Beta'])]
+        Y = sample['Beta'][~np.isnan(sample['Beta'])]
+        return (X, Y, Xstar, gTruth)
+
+
 def feat_neighbors_thresh(sites, train_beta, train_extras, sample, test, corr, thresh):
 # Produces 'X' feature array of nearest neighbor beta values that will be fed
 # into regressor
@@ -105,44 +151,6 @@ def feat_neighbors_thresh(sites, train_beta, train_extras, sample, test, corr, t
         Y = sample['Beta'][~np.isnan(sample['Beta'])]
         return (X, Y, Xstar, gTruth)
 
-# Produces 'X' feature array of nearest neighbor beta values that will be fed
-# into regressor
-# Beta is an array of shape (# of CpG sites, nsamples)
-# Sites is an array of shape (# of CpG sites, 2) corresponding to 
-# start and ending bp of site
-def feat_neighbors_islands(sites, train_island, train_beta, sample, test):
-	X = np.zeros((len(train_beta), 39))
-	for i in range(0, len(train_beta)):
-		# Feature 1: CpG start site
-		X[i,0] = sites[i]
-		# Find 2 nearest neighbors to site i
-		(indices,distance)  = find_neighbors(sites, i)
-		index1 = indices[0]
-		index2 = indices[1]
-		for j in range(0, 33):
-			# Feature 2: beta at neighbor 1
-			X[i, 1] = train_beta[i+index1, j]
-			# Feature 3: distance to neighbor 1
-			X[i, 2] = distance[0]
-			# Feature 4: beta at neighbor 2
-			X[i, 3] = train_beta[i+index2, j]
-			# Feature 5: distance to neighbor 2
-			X[i, 4] = distance[1]
-			# Feature 6: CpG site boolean
-			X[i, 5] = train_island[i]
-			# Features 6-38: 33 sample beta values at CpG site
-			X[i, 5+j] = train_beta[i, j]
-		# Predict on feature set not on 450k chip
-	Xstar = X[sample['450k']==0]
-	gTruth = test['Beta'][sample['450k']==0]
-	Xstar = Xstar[~np.isnan(gTruth)]
-	gTruth = gTruth[~np.isnan(gTruth)]
-
-	# Only train on non-NaN values of Y
-	X = X[~np.isnan(sample['Beta'])]
-	Y = sample['Beta'][~np.isnan(sample['Beta'])]
-	return (X, Y, Xstar, gTruth)
-
 # Find nearest 2 sites to current CpG site
 # Returns list of indices of 2 nearest neighbors
 # Where the index in 'sites' is i + (index1, index2)
@@ -180,8 +188,7 @@ def find_neighbors(sites, i):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
-	parser.add_option("-o", dest="orig", action="store_true", default=False)
-	parser.add_option("-i", dest="origisland", action="store_true", default=False)
+	parser.add_option("-i", dest="island", action="store_true", default=False)
 	parser.add_option("-n", dest="fill_neighb", action="store_true", default=False)
 	parser.add_option("-m", dest="fill_mean", action="store_true", default=False)
 	parser.add_option("-c", dest="chroms", type='int', default=1)
@@ -196,6 +203,7 @@ def main(argv):
 	chroms = options.chroms
 	trees = options.estimators
 	thresh = options.thresh
+	island = options.island
 	start_time = time.time()
 
 	# Read in full feature data
@@ -225,6 +233,9 @@ def main(argv):
 	if thresh:
 		(X, Y, Xstar, Ystar) = feat_neighbors_thresh(sites[1:-1].copy(), train_beta[1:-1].copy(), \
 							train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy(), uf.read_corrs(path, chroms), thresh)
+	elif island:
+		(X, Y, Xstar, Ystar) = feat_neighbors_island(sites[1:-1].copy(), train_beta[1:-1].copy(), \
+                                                        train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy(), train['CGI'])
 	else:
 		(X, Y, Xstar, Ystar) = feat_neighbors(sites[1:-1].copy(), train_beta[1:-1].copy(), \
 							train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy())	
