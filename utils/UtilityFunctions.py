@@ -15,8 +15,8 @@ SAMPLE_FNAME = "_cutoff_20_sample.bed"
 SAMPLE_INAME = "_cutoff_20_sample_island.bed"
 TEST_FNAME = "_cutoff_20_test.bed"
 TEST_INAME = "_cutoff_20_test_island.bed"
-INT_TR_FNAME = "_train_full_feats.bed"
-INT_S_FNAME = "_sample_full_feats.bed"
+INT_TR_FNAME = "_train_full.bed"
+INT_S_FNAME = "_sample_full.bed"
 All_TE_FNAME = "all_test.bed"
 
 def calc_r2_RMSE(preds, gTruth, intercept = 0):
@@ -128,12 +128,12 @@ def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 	dt = [('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
 		('Strand', np.str_, 1), ('Beta', np.float32, (beta_len)), ('450k', np.byte)]
 	if ftype == 'train' or ftype == 'sample':
-		dt += [('Exon', np.byte), ('DHS', np.int8), ('CGI', np.byte)]
+		dt += [('Exon', np.byte), ('DHS', np.int8), ('CGI', np.byte), ('GC_100', np.float32), ('GC_400', np.float32), ('GC_1000', np.float32)]
 
 	if ftype == 'train':
-		cols = (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,-3,-1)
+		cols = (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,43,45,49,54,59)
 	if ftype == 'sample':
-		cols = (0,1,2,3,4,5,6,-3,-1)
+		cols = (0,1,2,3,4,5,6,11,13,17,22,27)
 	# Read in bed file
 	bed_feats = np.loadtxt(mypath + chrom_s + fname, dtype = dt, usecols=cols)
 	# Read in corr file
@@ -162,9 +162,9 @@ def main(argv):
 	(options, _args) = parser.parse_args()
 	path = options.path
 	
-	train_feat_all, corr = read_bed_dat_feat(path, chrom=1)
-	sample_feat_all, corr = read_bed_dat_feat(path, chrom=1, ftype='sample')
-	test_feat_all, corr = read_bed_dat_feat(path, chrom=1, ftype='test')
+	train_feat_all = read_bed_dat_feat(path, chrom=1)
+	sample_feat_all = read_bed_dat_feat(path, chrom=1, ftype='sample')
+	test_feat_all = read_bed_dat_feat(path, chrom=1, ftype='test')
 	print "train_feat_all[0] = %s" % train_feat_all[0]
 	print "sample_feat_all[0] = %s" % sample_feat_all[0]
 	print "test_feat_all[0] = %s" % test_feat_all[0]
