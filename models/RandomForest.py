@@ -12,13 +12,16 @@ sys.path.append('../utils/')
 from UtilityFunctions import *
 from FillData import *
 
-def feat_neighbors(sites, train_beta, sample, test):
+def feat_neighbors(sites, train_beta, train_extras, sample, test):
 # Produces 'X' feature array of nearest neighbor beta values that will be fed
 # into regressor
 # Beta is an array of shape (# of CpG sites, nsamples)
 # Sites is an array of shape (# of CpG sites, ) corresponding to 
 # the start of each bp site
-	X = np.zeros((len(train_beta), 38))
+# train_extras: array of shape (# of CpG sites, 3) which
+	# Adds 3 extra features: Exon, DHS, CGI
+	num_extras = train_extras.shape[1]
+	X = np.zeros((len(train_beta), 38+num_extras))
 	for i in range(0, len(train_beta)):
 		# Feature 1: CpG start site
 		X[i,0] = sites[i]
@@ -37,6 +40,8 @@ def feat_neighbors(sites, train_beta, sample, test):
 			X[i, 4] = distance[1]
 			# Features 6-38: 33 sample beta values at CpG site
 			X[i, 5+j] = train_beta[i, j]
+	# Features 39+: Extra features
+	X[:,-num_extras:] = train_extras
 	# Predict on feature set not on 450k chip
 	Xstar = X[sample['450k']==0]
 	gTruth = test['Beta'][sample['450k']==0]
@@ -125,33 +130,38 @@ def main(argv):
 	parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
 	parser.add_option("-o", dest="orig", action="store_true", default=False)
 	parser.add_option("-i", dest="origisland", action="store_true", default=False)
+	parser.add_option("-n", dest="fill_neighb", action="store_true", default=False)
+	parser.add_option("-m", dest="fill_mean", action="store_true", default=False)
+	
 	(options, _args) = parser.parse_args()
 	path = options.path
+	print "PATH = " + path
+	fill_neighb = options.fill_neighb
+	fill_mean = options.fill_mean
 	start_time = time.time()
 
 	# Read in full feature data
-# 	train = read_bed_dat_train(path, Island=True)
 	train = read_bed_dat_feat(path, chrom=1, ftype='train')
 	sample = read_bed_dat_feat(path, chrom=1, ftype='sample')
 	test = read_bed_dat_feat(path, chrom=1, ftype='test')
+	print "Beds read %s" % (time.time() - start_time)
 	sites = train['Start']
 # Fill in NaNs in training with mean over 33 samples in training bed
-	train_beta = fill_neighbors(sites, train['Beta'], 10)
+	train_extras = np.c_[train['Exon'], train['DHS'], train['CGI']]
+	if fill_neighb:
+		train_beta = fill_neighbors(sites, train['Beta'], 10)
+	if fill_mean:
+		train_beta = fill_mean(train['Beta'])
 	#train_beta = fill_rand(train['Beta'])
-	#train_beta = fill_mean(train['Beta'])
 # Produce feature array 'X' and vector of beta values 'Y'
 # Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
-	(X, Y, Xstar, Ystar) = feat_neighbors(sites.copy(), train_beta.copy(), sample.copy(), test.copy())
+	(X, Y, Xstar, Ystar) = feat_neighbors(sites.copy(), train_beta.copy(), train_extras.copy(), sample.copy(), test.copy())
 	# Add 3 features: Exon, DHS, CGI
-	full_X = np.c_[X, np.zeros((len(X),3))]
-	full_X[:,-3] = train['Exon']
-	full_X[:,-2] = train['DHS']
-	full_X[:,-1] = train['CGI']
 	full_feat_start = time.time()
 	# Initialize regressor with default parameters
 	model = RandomForestRegressor(oob_score=True)
 # Fit regressor using training data
-	model.fit(full_X, Y)
+	model.fit(X, Y)
 # Predict on Xstar values 
 	Yhat = model.predict(Xstar)
 # Calculate r2 and RMSE
@@ -164,64 +174,6 @@ def main(argv):
 	print "r2 : %f" % (r2)
 	print "RMSE: %f" % (RMSE)
 
-# Island feature set
-	if options.origisland:
-		train = read_bed_dat_train(path, addIsland=True)
-		sample = read_bed_dat_sample(path, addIsland=True)
-		test = read_bed_dat_test(path, addIsland=True)
-		sites = train['Start']
-	# Fill in NaNs in training set
-		train_beta = fill_neighbors(sites, train['Beta'], 10)
-		#train_beta = fill_rand(train['Beta'])
-		#train_beta = fill_mean(train['Beta'])
-		train_island = train['Island']
-	# Produce feature array 'X' and vector of beta values 'Y'
-	# Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
-		(X, Y, Xstar, Ystar) = feat_neighbors_islands(sites.copy(), train_island.copy(), train_beta.copy(), sample.copy(), test.copy())
-	
-		island_start = time.time()
-	# Fit regressor using training data
-		model.fit(X, Y)
-	# Predict on Xstar values 
-		Yhat = model.predict(Xstar)
-	# Calculate metrics
-		(r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
-		print "Island feature set"
-		print "Runtime: %f" % (time.time()-island_start)
-		print "RandomForest Runtime: %f" % (time.time()-start_time)
-		print str(model.feature_importances_)
-		print "r2 : %f" % (r2)
-		print "oob: " + str(model.oob_score_)
-		print "RMSE: %f" % (RMSE)
-
-# Standard feature set - not including CGI boolean
-	if options.orig:
-		train = read_bed_dat_train(path)
-		sample = read_bed_dat_sample(path)
-		test = read_bed_dat_test(path)
-		sites = train['Start']
-	# Fill in NaNs in training set
-		train_beta = fill_neighbors(sites, train['Beta'], 10)
-		#train_beta = fill_rand(train['Beta'])
-		#train_beta = fill_mean(train['Beta'])
-	# Produce feature array 'X' and vector of beta values 'Y'
-	# Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
-		(X, Y, Xstar, Ystar) = feat_neighbors(sites.copy(), train_beta.copy(), sample.copy(), test.copy())
-		start_rf = time.time()
-	# Fit regressor using training data
-		model.fit(X, Y)
-	# Predict on Xstar values 
-		Yhat = model.predict(Xstar)
-	# Calculate metrics
-		(r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
-		print "Standard Feature Set"
-		print "Runtime: %f" % (time.time()-start_time)
-		print "RandomForest Runtime: %f" % (time.time()-start_rf)
-		print str(model.feature_importances_)
-		print "r2 : %f" % (r2)
-		print "oob: " + str(model.oob_score_)
-		print "RMSE: %f" % (RMSE)
-		
 	print "Total Runtime: %f" % (time.time()-start_time)
 
 if __name__ == '__main__':
