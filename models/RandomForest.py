@@ -123,6 +123,8 @@ def find_neighbors(sites, i):
 def main(argv):
 	parser = OptionParser()
 	parser.add_option("-p", "--path", dest="path", help='read bed data fom PATH', metavar='PATH')
+	parser.add_option("-o", dest="orig", action="store_true", default=False)
+	parser.add_option("-i", dest="origisland", action="store_true", default=False)
 	(options, _args) = parser.parse_args()
 	path = options.path
 	start_time = time.time()
@@ -140,11 +142,16 @@ def main(argv):
 # Produce feature array 'X' and vector of beta values 'Y'
 # Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
 	(X, Y, Xstar, Ystar) = feat_neighbors(sites.copy(), train_beta.copy(), sample.copy(), test.copy())
+	# Add 3 features: Exon, DHS, CGI
+	full_X = np.c_[X, np.zeros((len(X),3))]
+	full_X[:,-3] = train['Exon']
+	full_X[:,-2] = train['DHS']
+	full_X[:,-1] = train['CGI']
 	full_feat_start = time.time()
 	# Initialize regressor with default parameters
 	model = RandomForestRegressor(oob_score=True)
 # Fit regressor using training data
-	model.fit(X, Y)
+	model.fit(full_X, Y)
 # Predict on Xstar values 
 	Yhat = model.predict(Xstar)
 # Calculate r2 and RMSE
@@ -158,60 +165,64 @@ def main(argv):
 	print "RMSE: %f" % (RMSE)
 
 # Island feature set
-	train = read_bed_dat_train(path, addIsland=True)
-	sample = read_bed_dat_sample(path, addIsland=True)
-	test = read_bed_dat_test(path, addIsland=True)
-	sites = train['Start']
-# Fill in NaNs in training set
-	train_beta = fill_neighbors(sites, train['Beta'], 10)
-	#train_beta = fill_rand(train['Beta'])
-	#train_beta = fill_mean(train['Beta'])
-	train_island = train['Island']
-# Produce feature array 'X' and vector of beta values 'Y'
-# Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
-	(X, Y, Xstar, Ystar) = feat_neighbors_islands(sites.copy(), train_island.copy(), train_beta.copy(), sample.copy(), test.copy())
-
-	island_start = time.time()
-# Fit regressor using training data
-	model.fit(X, Y)
-# Predict on Xstar values 
-	Yhat = model.predict(Xstar)
-# Calculate metrics
-	(r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
-	print "Island feature set"
-	print "Runtime: %f" % (time.time()-island_start)
-	print "RandomForest Runtime: %f" % (time.time()-start_time)
-	print str(model.feature_importances_)
-	print "r2 : %f" % (r2)
-	print "oob: " + str(model.oob_score_)
-	print "RMSE: %f" % (RMSE)
+	if options.origisland:
+		train = read_bed_dat_train(path, addIsland=True)
+		sample = read_bed_dat_sample(path, addIsland=True)
+		test = read_bed_dat_test(path, addIsland=True)
+		sites = train['Start']
+	# Fill in NaNs in training set
+		train_beta = fill_neighbors(sites, train['Beta'], 10)
+		#train_beta = fill_rand(train['Beta'])
+		#train_beta = fill_mean(train['Beta'])
+		train_island = train['Island']
+	# Produce feature array 'X' and vector of beta values 'Y'
+	# Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
+		(X, Y, Xstar, Ystar) = feat_neighbors_islands(sites.copy(), train_island.copy(), train_beta.copy(), sample.copy(), test.copy())
+	
+		island_start = time.time()
+	# Fit regressor using training data
+		model.fit(X, Y)
+	# Predict on Xstar values 
+		Yhat = model.predict(Xstar)
+	# Calculate metrics
+		(r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
+		print "Island feature set"
+		print "Runtime: %f" % (time.time()-island_start)
+		print "RandomForest Runtime: %f" % (time.time()-start_time)
+		print str(model.feature_importances_)
+		print "r2 : %f" % (r2)
+		print "oob: " + str(model.oob_score_)
+		print "RMSE: %f" % (RMSE)
 
 # Standard feature set - not including CGI boolean
-	train = read_bed_dat_train(path)
-	sample = read_bed_dat_sample(path)
-	test = read_bed_dat_test(path)
-	sites = train['Start']
-# Fill in NaNs in training set
-	train_beta = fill_neighbors(sites, train['Beta'], 10)
-	#train_beta = fill_rand(train['Beta'])
-	#train_beta = fill_mean(train['Beta'])
-# Produce feature array 'X' and vector of beta values 'Y'
-# Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
-	(X, Y, Xstar, Ystar) = feat_neighbors(sites.copy(), train_beta.copy(), sample.copy(), test.copy())
-	start_rf = time.time()
-# Fit regressor using training data
-	model.fit(X, Y)
-# Predict on Xstar values 
-	Yhat = model.predict(Xstar)
-# Calculate metrics
-	(r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
-	print "Standard Feature Set"
-	print "Runtime: %f" % (time.time()-start_time)
-	print "RandomForest Runtime: %f" % (time.time()-start_rf)
-	print str(model.feature_importances_)
-	print "r2 : %f" % (r2)
-	print "oob: " + str(model.oob_score_)
-	print "RMSE: %f" % (RMSE)
+	if options.orig:
+		train = read_bed_dat_train(path)
+		sample = read_bed_dat_sample(path)
+		test = read_bed_dat_test(path)
+		sites = train['Start']
+	# Fill in NaNs in training set
+		train_beta = fill_neighbors(sites, train['Beta'], 10)
+		#train_beta = fill_rand(train['Beta'])
+		#train_beta = fill_mean(train['Beta'])
+	# Produce feature array 'X' and vector of beta values 'Y'
+	# Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
+		(X, Y, Xstar, Ystar) = feat_neighbors(sites.copy(), train_beta.copy(), sample.copy(), test.copy())
+		start_rf = time.time()
+	# Fit regressor using training data
+		model.fit(X, Y)
+	# Predict on Xstar values 
+		Yhat = model.predict(Xstar)
+	# Calculate metrics
+		(r2, RMSE) = calc_r2_RMSE(Yhat, Ystar)
+		print "Standard Feature Set"
+		print "Runtime: %f" % (time.time()-start_time)
+		print "RandomForest Runtime: %f" % (time.time()-start_rf)
+		print str(model.feature_importances_)
+		print "r2 : %f" % (r2)
+		print "oob: " + str(model.oob_score_)
+		print "RMSE: %f" % (RMSE)
+		
+	print "Total Runtime: %f" % (time.time()-start_time)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
