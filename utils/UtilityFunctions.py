@@ -55,10 +55,7 @@ def read_bed_dat_train(mypath, chrom=1, addIsland=False, Island=False):
 	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + TRAIN_FNAME, \
 					dtype=[('Chrom', np.str_, 4), ('Start', np.int32), ('End', np.int32), \
 						('Strand', np.str_, 1), ('Beta', np.float32, (33)), ('450k', np.int8)])
-	if addIsland and chrom==1:
-		return insert_island_data(bed, mypath + PRE_FNAME + chrom_s + TEST_INAME)
-	else:
-		return bed
+	return bed
 
 def read_bed_dat_sample(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + SAMPLE_FNAME
@@ -77,10 +74,7 @@ def read_bed_dat_sample(mypath, chrom=1, addIsland=False, Island=False):
 	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + SAMPLE_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
-	if addIsland and chrom==1:
-		return insert_island_data(bed, mypath + PRE_FNAME + chrom_s + TEST_INAME)
-	else:
-		return bed
+	return bed
 
 def read_bed_dat_test(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + TEST_FNAME
@@ -98,10 +92,7 @@ def read_bed_dat_test(mypath, chrom=1, addIsland=False, Island=False):
 	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + TEST_FNAME, dtype=[('Chrom', np.str_, 4), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
-	if addIsland and chrom==1:
-		return insert_island_data(bed, mypath + PRE_FNAME + chrom_s + TEST_INAME)
-	else:
-		return bed
+	return bed
 
 def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 # Read featured bed file from mypath of type given by ftype
@@ -134,11 +125,7 @@ def read_bed_dat_feat(mypath, chrom=1, ftype='train'):
 		cols = (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,-3,-1)
 	if ftype == 'sample':
 		cols = (0,1,2,3,4,5,6,-3,-1)
-	# Read in bed file
-	bed_feats = np.loadtxt(mypath + chrom_s + fname, dtype = dt, usecols=cols)
-	# Read in corr file
-	corr = np.loadtxt(mypath + chrom_s + "_train_corr.txt")
-	return bed_feats, corr
+	return np.loadtxt(mypath + chrom_s + fname, dtype = dt, usecols=cols)
 
 def read_bed_dat_train_feat(mypath, chrom=1):
 # read_bed_dat_feat wrapper for train beds
@@ -149,6 +136,16 @@ def read_bed_dat_test_feat(mypath, chrom=1):
 def read_bed_dat_sample_feat(mypath, chrom=1):
 # read_bed_dat_feat wrapper for sample beds
 	return read_bed_dat_feat(mypath, chrom, 'sample')
+
+def read_corrs(mypath, chrom=1):
+# Return neighbor correlation values in (# of CpG sites, 2) array
+# Col 0: upstream neighbor, Col 1: downstream
+	if chrom == 0:
+		chrom_s = 'all'
+	else:
+		chrom_s = 'chr' + str(chrom)
+	return np.loadtxt(mypath + chrom_s + "_train_corr.txt")
+
 
 def storePreds(path, yHats, paras, start_time):
 # Stores ndarray to txt in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
@@ -161,10 +158,13 @@ def main(argv):
 	parser.add_option("-p", "--path", dest="path", help='read bed data from PATH', metavar='PATH')
 	(options, _args) = parser.parse_args()
 	path = options.path
-	
-	train_feat_all, corr = read_bed_dat_feat(path, chrom=1)
-	sample_feat_all, corr = read_bed_dat_feat(path, chrom=1, ftype='sample')
-	test_feat_all, corr = read_bed_dat_feat(path, chrom=1, ftype='test')
+	print "PATH = " + path
+
+	corrs = read_corrs(path, chrom=1)
+	train_feat_all = read_bed_dat_feat(path, chrom=1)
+	sample_feat_all = read_bed_dat_feat(path, chrom=1, ftype='sample')
+	test_feat_all = read_bed_dat_feat(path, chrom=1, ftype='test')
+	print "corrs[0] = %s" % corrs[0]
 	print "train_feat_all[0] = %s" % train_feat_all[0]
 	print "sample_feat_all[0] = %s" % sample_feat_all[0]
 	print "test_feat_all[0] = %s" % test_feat_all[0]
