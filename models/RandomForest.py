@@ -83,9 +83,9 @@ def feat_neighbors_island(sites, train_beta, train_extras, sample, test, island)
         # Features 39+: Extra features
         X[:,-num_extras:] = train_extras
 	# Select on islands
-	X = X[island == 1]
-        sample = sample[island == 1]
-        test = test[island == 1]
+	X = X['CGI' == 1]
+        sample = sample['CGI' == 1]
+        test = test['CGI' == 1]
         # Predict on feature set not on 450k chip
         Xstar = X[sample['450k']==0]
         gTruth = test['Beta'][sample['450k']==0]
@@ -215,7 +215,7 @@ def main(argv):
 	fill_m = True
 	trees = 35
 	thresh = 0.50
-	island = False
+	island = True
 	gc_vals = [100, 400, 1000, 1500, 0]
 	for g in gc_vals:
 		options.GCwindow = g
