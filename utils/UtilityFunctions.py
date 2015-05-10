@@ -17,7 +17,8 @@ TEST_FNAME = "_cutoff_20_test.bed"
 TEST_INAME = "_cutoff_20_test_island.bed"
 INT_TR_FNAME = "_train_full.bed"
 INT_S_FNAME = "_sample_full.bed"
-All_TE_FNAME = "all_test.bed"
+All_TE_FNAME = "_test.bed"
+PREDSUM_FNAME = 'PredictionSummary.txt'
 
 def calc_r2_RMSE(preds, gTruth, intercept = 0):
 # Expects two 'Beta' both of size nX1
@@ -80,16 +81,20 @@ def read_bed_dat_test(mypath, chrom=1, addIsland=False, Island=False):
 # Accepts path to location of PRE_FNAME + chrom + TEST_FNAME
 # chrom defaults to 1 
 	if chrom == 0:
+		prefname = ''
 		chrom_s = 'all'
+		fname = All_TE_FNAME
 	else:
+		prefname = PRE_FNAME
 		chrom_s = 'chr' + str(chrom)
+		fname = TEST_FNAME
 
 	if Island and chrom==1:
 		return np.loadtxt(mypath + PRE_FNAME + chrom_s + TEST_INAME, \
 						dtype=[('Chrom', np.str_, 5), ('Start', np.int32), ('End', np.int32), \
 							('Strand', np.str_, 1), ('Beta', np.float32), ('450k', np.int8)])
 
-	bed = np.loadtxt(mypath + PRE_FNAME + chrom_s + TEST_FNAME, dtype=[('Chrom', np.str_, 5), ('Start', np.int32), \
+	bed = np.loadtxt(mypath + prefname + chrom_s + fname, dtype=[('Chrom', np.str_, 5), ('Start', np.int32), \
 									('End', np.int32), ('Strand', np.str_, 1), \
 									('Beta', np.float32), ('450k', np.int8)])
 	return bed
@@ -148,11 +153,16 @@ def read_corrs(mypath, chrom=1):
 	return np.loadtxt(mypath + chrom_s + "_train_corr.txt")
 
 
-def storePreds(path, yHats, paras, start_time):
+def storePreds(path, yHats, paras, start_time, summary = True):
 # Stores ndarray to txt in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
 # paras also written as a comment to first line
 # yHats will be formatted as floats 
 	np.savetxt(path+"predictions_"+str(paras)+"_csec="+str(int(time.time()-start_time))+".txt", yHats, fmt="%f", header=paras)
+# 	if summary:
+# 		with open(path + PREDSUM_FNAME, 'a') as predf:
+# 			pass
+# 		predf.close()
+	
 
 def main(argv):
 	parser = OptionParser()
