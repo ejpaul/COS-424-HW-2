@@ -83,9 +83,9 @@ def feat_neighbors_island(sites, train_beta, train_extras, sample, test, island)
         # Features 39+: Extra features
         X[:,-num_extras:] = train_extras
 	# Select on islands
-	X = X[island == 1]
-        sample = sample[island == 1]
-        test = test[island == 1]
+	X = X['CGI' == 1]
+        sample = sample['CGI' == 1]
+        test = test['CGI' == 1]
         # Predict on feature set not on 450k chip
         Xstar = X[sample['450k']==0]
         gTruth = test['Beta'][sample['450k']==0]
@@ -214,73 +214,77 @@ def main(argv):
 # 	while not done:
 	fill_m = True
 	trees = 35
-	thresh = 0.50
+	thresh = 0.75
 	island = False
 	gc_vals = [100, 400, 1000, 1500, 0]
 	for g in gc_vals:
 		options.GCwindow = g
-		for i in range(1,22):
-			chroms = i
-			if fill_m:
-				fill_str = 'mean'
-			else:
-				fill_str = 'neigh'
-			paras = "chr=%s_fill=%s_GC=%s_thrsh=%s_trees=%s_isl=%s" % (chroms,fill_str, options.GCwindow, thresh, trees, island)
-			print paras
-			
-			# Read in full feature data
-			train = uf.read_bed_dat_feat(path, chrom=chroms, ftype='train')
-			sample = uf.read_bed_dat_feat(path, chrom=chroms, ftype='sample')
-			test = uf.read_bed_dat_feat(path, chrom=chroms, ftype='test')
-			print "Beds read %s" % (time.time() - start_time)
-			sites = train['Start']
-		# Fill in NaNs in training with mean over 33 samples in training bed
-			train_extras = np.c_[train['Exon'], train['DHS'], train['CGI']]
-			if options.GCwindow:
-				try:
-					train_extras = np.c_[train_extras, train['GC_%s' % str(options.GCwindow)]]
-				except ValueError:
+		thresh_vals = [0.25, 0.50, 0.75]
+		for i in thresh_vals:
+			thresh = i
+			chrom_range = range(1,22) + [0]
+			for j in chrom_range:
+				chroms = j
+				if fill_m:
+					fill_str = 'mean'
+				else:
+					fill_str = 'neigh'
+				paras = "chr=%s_fill=%s_GC=%s_thrsh=%s_trees=%s_isl=%s" % (chroms,fill_str, options.GCwindow, thresh, trees, island)
+				print paras
+				
+				# Read in full feature data
+				train = uf.read_bed_dat_feat(path, chrom=chroms, ftype='train')
+				sample = uf.read_bed_dat_feat(path, chrom=chroms, ftype='sample')
+				test = uf.read_bed_dat_feat(path, chrom=chroms, ftype='test')
+				print "Beds read %s" % (time.time() - start_time)
+				sites = train['Start']
+			# Fill in NaNs in training with mean over 33 samples in training bed
+				train_extras = np.c_[train['Exon'], train['DHS'], train['CGI']]
+				if options.GCwindow:
+					try:
+						train_extras = np.c_[train_extras, train['GC_%s' % str(options.GCwindow)]]
+					except ValueError:
+						train_extras = np.c_[train_extras, train['GC_100'], train['GC_400'], train['GC_1000']]
+				else:
 					train_extras = np.c_[train_extras, train['GC_100'], train['GC_400'], train['GC_1000']]
-			else:
-				train_extras = np.c_[train_extras, train['GC_100'], train['GC_400'], train['GC_1000']]
-			train_extras = np.c_[train_extras, uf.read_corrs(path, chroms)]
-			print "train_extras[0]: %s, shape: %s" % (train_extras[1:-1][0], train_extras[1:-1].shape)
-			if fill_m:
-				train_beta = fill_mean(train['Beta'])
-			else:
-				train_beta = fill_neighbors(sites, train['Beta'], 10)
-		# Trim first and last row off to eliminate nan values in corrs
-		# Produce feature array 'X' and vector of beta values 'Y'
-		# Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
-			if thresh:
-				(X, Y, Xstar, Ystar) = feat_neighbors_thresh(sites[1:-1].copy(), train_beta[1:-1].copy(), \
-									train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy(), uf.read_corrs(path, chroms), thresh)
-			elif island:
-				(X, Y, Xstar, Ystar) = feat_neighbors_island(sites[1:-1].copy(), train_beta[1:-1].copy(), \
-		                                                        train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy(), train['CGI'])
-			else:
-				(X, Y, Xstar, Ystar) = feat_neighbors(sites[1:-1].copy(), train_beta[1:-1].copy(), \
-									train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy())	
-			print "X[0]: %s" % X[0]
-			full_feat_start = time.time()
-			# Initialize regressor with default parameters
-			model = RandomForestRegressor(oob_score=True, n_estimators=trees)
-		# Fit regressor using training data
-			model.fit(X, Y)
-		# Predict on Xstar values 
-			Yhat = model.predict(Xstar)
-		# Calculate r2 and RMSE
-			(r2, RMSE) = uf.calc_r2_RMSE(Yhat, Ystar)
-			print "Runtime: %f" % (time.time()-full_feat_start)
-			print "RandomForest Runtime: %f" % (time.time()-start_time)
-			print str(model.feature_importances_)
-			oob_str = str(model.oob_score_)
-			print "oob: " + oob_str
-			print "r2 : %f" % (r2)
-			print "RMSE: %f" % (RMSE)
-			print "Total Runtime: %f" % (time.time()-start_time)
-			paras += "_oob=%s_r2=%s_RMSE=%s" % (oob_str, r2, RMSE)
-			uf.storePreds(path, Yhat, paras, start_time)
+				train_extras = np.c_[train_extras, uf.read_corrs(path, chroms)]
+				print "train_extras[0]: %s, shape: %s" % (train_extras[1:-1][0], train_extras[1:-1].shape)
+				if fill_m:
+					train_beta = fill_mean(train['Beta'])
+				else:
+					train_beta = fill_neighbors(sites, train['Beta'], 10)
+			# Trim first and last row off to eliminate nan values in corrs
+			# Produce feature array 'X' and vector of beta values 'Y'
+			# Produce feature array 'X*' to predict on and ground truth beta values 'Y*'
+				if thresh:
+					(X, Y, Xstar, Ystar) = feat_neighbors_thresh(sites[1:-1].copy(), train_beta[1:-1].copy(), \
+										train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy(), uf.read_corrs(path, chroms), thresh)
+				elif island:
+					(X, Y, Xstar, Ystar) = feat_neighbors_island(sites[1:-1].copy(), train_beta[1:-1].copy(), \
+			                                                        train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy(), train['CGI'])
+				else:
+					(X, Y, Xstar, Ystar) = feat_neighbors(sites[1:-1].copy(), train_beta[1:-1].copy(), \
+										train_extras[1:-1].copy(), sample[1:-1].copy(), test[1:-1].copy())	
+				print "X[0]: %s" % X[0]
+				full_feat_start = time.time()
+				# Initialize regressor with default parameters
+				model = RandomForestRegressor(oob_score=True, n_estimators=trees)
+			# Fit regressor using training data
+				model.fit(X, Y)
+			# Predict on Xstar values 
+				Yhat = model.predict(Xstar)
+			# Calculate r2 and RMSE
+				(r2, RMSE) = uf.calc_r2_RMSE(Yhat, Ystar)
+				print "Runtime: %f" % (time.time()-full_feat_start)
+				print "RandomForest Runtime: %f" % (time.time()-start_time)
+				print str(model.feature_importances_)
+				oob_str = str(model.oob_score_)
+				print "oob: " + oob_str
+				print "r2 : %f" % (r2)
+				print "RMSE: %f" % (RMSE)
+				print "Total Runtime: %f" % (time.time()-start_time)
+				paras += "_oob=%s_r2=%s_RMSE=%s" % (oob_str, r2, RMSE)
+				uf.storePreds(path, Yhat, paras, full_feat_start)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
