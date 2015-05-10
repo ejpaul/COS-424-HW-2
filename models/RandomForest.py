@@ -205,6 +205,11 @@ def main(argv):
 	thresh = options.thresh
 	island = options.island
 	start_time = time.time()
+	if fill_m:
+		fill_str = 'mean'
+	else:
+		fill_str = 'neigh'
+	paras = "chr=%s_fill=%s_GC=%s_thrsh=%s_trees=%s" % (chroms,fill_str, options.GCwindow, thresh, trees)
 
 	# Read in full feature data
 	train = uf.read_bed_dat_feat(path, chrom=chroms, ftype='train')
@@ -256,6 +261,7 @@ def main(argv):
 	print "r2 : %f" % (r2)
 	print "RMSE: %f" % (RMSE)
 	print "Total Runtime: %f" % (time.time()-start_time)
+	uf.storePreds(path, Yhat, paras, start_time)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
