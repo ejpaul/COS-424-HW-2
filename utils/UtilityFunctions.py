@@ -153,11 +153,14 @@ def read_corrs(mypath, chrom=1):
 	return np.loadtxt(mypath + chrom_s + "_train_corr.txt")
 
 
-def storePreds(path, yHats, paras, start_time, summary = True):
+def storePreds(path, yHats, paras, start_time, strs = False, summary = True):
 # Stores ndarray to txt in path+"predictions_"+paras+"_csec="+time.time()-start_time+".txt"
 # paras also written as a comment to first line
 # yHats will be formatted as floats 
-	np.savetxt(path+"predictions_"+str(paras)+"_csec="+str(int(time.time()-start_time))+".txt", yHats, fmt="%f", header=paras)
+	if strs:
+		np.savetxt(path+"predictions_"+str(paras)+"_csec="+str(int(time.time()-start_time))+".txt", yHats, fmt="%s", header=paras)
+	else:
+		np.savetxt(path+"predictions_"+str(paras)+"_csec="+str(int(time.time()-start_time))+".txt", yHats, fmt="%f", header=paras)
 # 	if summary:
 # 		with open(path + PREDSUM_FNAME, 'a') as predf:
 # 			pass
