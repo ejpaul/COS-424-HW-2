@@ -132,7 +132,7 @@ def main(argv):
 #     fill_m = options.fill_mean
     chrom_range = [options.chroms]
     trees = options.estimators # Default 35
-#     thresh = options.thresh
+    thresh_vals = [options.thresh]
     island = options.island # Default False
 #     gcwind = options.GCwindow
     start_time = time.time()
@@ -143,10 +143,10 @@ def main(argv):
         fill_vals += [True]
 #     fill_vals = [False, True]
 #     gc_vals = [100, 400, 1000, 1500, 0]
-    gc_vals = [0]
+    gc_vals = [400, 0, 1500]
     thresh_vals = [0.75, 0.50, 0.25]
 #             chrom_range = range(1,22) + [0]
-#     chrom_range = [0]
+    chrom_range = [0]
     for chroms in chrom_range:
         # Read in full feature data
         train = uf.read_bed_dat_feat(path, chrom=chroms, ftype='train')
@@ -166,7 +166,8 @@ def main(argv):
                     paras = "chr=%s_fill=%s_GC=%s_thrsh=%s_trees=%s_isl=%s" % (chroms,fill_str, gcwind, thresh, trees, island)
                     print paras
 
-                    train_extras = np.c_[train['Exon'], train['DHS'], train['CGI']]
+#                     train_extras = np.c_[train['Exon'], train['DHS'], train['CGI']]
+                    train_extras = np.c_[train['DHS']]
                     if gcwind:
                         try:
                             train_extras = np.c_[train_extras, train['GC_%s' % str(gcwind)]]
@@ -183,11 +184,13 @@ def main(argv):
                     features_key[4] = 'Nei_2_dist'
                     for bnum in range(1,34):
                         features_key[bnum+4] = 'Beta' + str(bnum)
-                    features_key[38] = 'Exon'
-                    features_key[39] = 'DHS'
-                    features_key[40] = 'CGI'
+#                     features_key[38] = 'Exon'
+#                     features_key[39] = 'DHS'
+                    features_key[38] = 'DHS'
+#                     features_key[40] = 'CGI'
                     if gcwind:
-                        features_key[41:] = 'GC'
+#                         features_key[41:] = 'GC'
+                        features_key[39:] = 'GC'
                     features_key[-2:] = 'corrs'
                     print "train_extras[0]: %s, shape: %s" % (train_extras[1:-1][0], train_extras[1:-1].shape)
                     # Fill in NaNs in training data
@@ -227,7 +230,7 @@ def main(argv):
                     print "RandomForest Runtime: %f" % (time.time()-full_feat_start)
                     print "Total Runtime: %f" % (time.time()-start_time)
                     paras += "_oob=%s_r2=%s_RMSE=%s_N=%s" % (oob_str, r2, RMSE, Yhat.shape[0])
-                    uf.storePreds(path + 'test/', np.c_[features_key, importants], paras, full_feat_start, strs = True)
+                    uf.storePreds(path + 'NoCPI_NoExon/', np.c_[features_key, importants], paras, full_feat_start, strs = True)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
